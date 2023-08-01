@@ -1,7 +1,4 @@
-﻿
-using Microsoft.Extensions.DependencyInjection;
-using RinhaBackEnd.Test.Extensions;
-using System;
+﻿using RinhaBackEnd.Test.Extensions;
 
 namespace RinhaBackEnd.Test.Controllers;
 
@@ -39,6 +36,30 @@ public class PeopleControllerTest : IDisposable
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
         sut.Nascimento.Should().Be(request.Nascimento.Date);
+        sut.Stack.Should().Contain(request.Stack);
+    }
+
+    [Fact]
+    public async Task CreatePersonShouldFailStatus422()
+    {
+        var request = new PersonRequest
+        {
+            Apelido = "",
+            Nascimento = DateTime.Now.AddYears(-10),
+            Nome = "",
+            Stack = new List<string> { "Java", "C#", "Html" }
+        };
+
+        var response = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+
+        var responseText = await response.Content.ReadAsStringAsync();
+
+        var sut = responseText.DeserializeTo<PersonRequest>();
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
+        sut.Nome.Should().Be(request.Nome);
+        sut.Apelido.Should().Be(request.Apelido);
+        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
         sut.Stack.Should().Contain(request.Stack);
     }
 
