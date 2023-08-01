@@ -11,12 +11,18 @@ builder.Services.AddDbContext<PeopleDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PeopleDbConnection"));
 }, ServiceLifetime.Scoped);
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 
 builder.Services.AddCustomAutoMapper();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 app.MapGet("/ping", () => "pong");
 
@@ -85,6 +91,8 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
     app.UseMigrationsEndPoint();
 }
+
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {

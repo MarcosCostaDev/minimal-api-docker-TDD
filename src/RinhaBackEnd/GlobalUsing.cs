@@ -7,3 +7,4 @@ global using Microsoft.Extensions.Configuration;
 global using Microsoft.OpenApi.Models;
 global using AutoMapper.QueryableExtensions;
 global using LinqKit;
+global using Microsoft.AspNetCore.HttpOverrides;
