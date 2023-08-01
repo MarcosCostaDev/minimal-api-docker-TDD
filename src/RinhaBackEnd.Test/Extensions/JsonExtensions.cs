@@ -17,4 +17,11 @@ public static class JsonExtensions
     {
         return new StringContent(@object.ToJson(), Encoding.UTF8, "application/json");
     }
+
+    public static T DeserializeTo<T>(this string json) {
+
+        if (string.IsNullOrEmpty(json)) return default!;
+
+        return JsonSerializer.Deserialize<T>(json)!;
+    }
 }

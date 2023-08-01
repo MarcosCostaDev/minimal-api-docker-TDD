@@ -1,4 +1,5 @@
-﻿using RinhaBackEnd.Test.Extensions;
+﻿
+using RinhaBackEnd.Test.Extensions;
 
 namespace RinhaBackEnd.Test.Controllers;
 
@@ -30,9 +31,105 @@ public class PeopleControllerTest
         var response = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
         response.EnsureSuccessStatusCode();
 
-        var sut = await response.Content.ReadAsStringAsync();
+        var responseText = await response.Content.ReadAsStringAsync();
 
-        sut.Should().Be("pong");
+        var sut = responseText.DeserializeTo<PersonResponse>();
+
+        sut.Id.Should().NotBeEmpty();
+        sut.Nome.Should().Be(request.Nome);
+        sut.Apelido.Should().Be(request.Apelido);
+        sut.Nascimento.Should().Be(request.Nascimento);
+        sut.Stack.Should().Contain(request.Stack);
     }
 
+    [Fact]
+    public async Task GetPersonShouldBeSuccess()
+    {
+        var request = new PersonRequest
+        {
+            Apelido = "Apelido1",
+            Nascimento = DateTime.Now.AddYears(-10),
+            Nome = "Nome1",
+            Stack = new List<string> { "Java", "C#", "Html" }
+        };
+
+        var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+        createReponse.EnsureSuccessStatusCode();
+
+        var response = await _fixture.Client.GetAsync(createReponse.Headers.Location.ToString());
+        response.EnsureSuccessStatusCode();
+
+        var responseText = await response.Content.ReadAsStringAsync();
+
+        var sut = responseText.DeserializeTo<PersonResponse>();
+
+        sut.Id.Should().NotBeEmpty();
+        sut.Nome.Should().Be(request.Nome);
+        sut.Apelido.Should().Be(request.Apelido);
+        sut.Nascimento.Should().Be(request.Nascimento);
+        sut.Stack.Should().Contain(request.Stack);
+    }
+
+    [Fact]
+    public async Task QueryPersonShouldBe10()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            var request = new PersonRequest
+            {
+                Apelido = $"Apelido{i}",
+                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)),
+                Nome = $"Nome{i}",
+                Stack = GetLanguages().ElementAt(i)
+            };
+
+            var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+            createReponse.EnsureSuccessStatusCode();
+        }
+
+        var response = await _fixture.Client.GetAsync("/pessoas?t=apelido");
+        response.EnsureSuccessStatusCode();
+
+        var sut = await response.Content.ReadAsStringAsync();
+
+        sut.Should().Be("10");
+    }
+
+    [Fact]
+    public async Task CountPersonShouldBe10()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            var request = new PersonRequest
+            {
+                Apelido = $"Apelido{i}",
+                Nascimento = DateTime.Now.AddYears(-10),
+                Nome = $"Nome{i}",
+                Stack = GetLanguages().ElementAt(i) 
+            };
+
+            var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+            createReponse.EnsureSuccessStatusCode();
+        }
+
+        var response = await _fixture.Client.GetAsync("/contagem-pessoas");
+        response.EnsureSuccessStatusCode();
+
+        var sut = await response.Content.ReadAsStringAsync();
+
+        sut.Should().Be("10");
+    }
+
+    private IEnumerable<IEnumerable<string>> GetLanguages() {
+        yield return new string[] { "Java", "PHP", "Go" };
+        yield return new string[] { "CSharp", "Elixir", "Javascript" };
+        yield return new string[] { "Dart", "Ruby", "Elixir" };
+        yield return new string[] { "Ruby", "PHP" };
+        yield return new string[] { "CSharp" };
+        yield return new string[] { "Java" };
+        yield return new string[] { "PHP", "Delphi" };
+        yield return new string[] { "Rush", "C", "C++" };
+        yield return new string[] { "Python", "Java", "C++" };
+        yield return new string[] { "Python", "CSharp", "Elixir" };
+    }
 }

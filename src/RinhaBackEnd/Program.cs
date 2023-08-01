@@ -45,7 +45,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
     await dbContext.SaveChangesAsync();
 
-    return Results.Created(new Uri($"/pessoas/{person.Id}"), mapper.Map<PersonResponse>(person));
+    return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), mapper.Map<PersonResponse>(person));
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper) =>
@@ -64,7 +64,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string t, PeopleDbContext 
 
 app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) =>
 {
-    return Results.Ok(dbContext.People.Count());
+    return Results.Ok(await dbContext.People.CountAsync());
 });
 
 if (app.Environment.IsDevelopment())
