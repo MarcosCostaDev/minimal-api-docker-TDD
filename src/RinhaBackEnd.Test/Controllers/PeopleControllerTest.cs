@@ -151,6 +151,6 @@ public class PeopleControllerTest : IDisposable
 
     public void Dispose()
     {
-        DisposeAsync(true).GetAwaiter().GetResult();
+        DisposeAsync(true).ConfigureAwait(false).GetAwaiter().GetResult();
     }
 }
