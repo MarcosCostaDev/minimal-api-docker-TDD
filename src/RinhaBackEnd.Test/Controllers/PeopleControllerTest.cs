@@ -1,5 +1,4 @@
-﻿using Flurl.Http;
-
+﻿using RinhaBackEnd.Test.Extensions;
 
 namespace RinhaBackEnd.Test.Controllers;
 
@@ -20,17 +19,18 @@ public class PeopleControllerTest
     [Fact]
     public async Task CreatePersonShouldBeSuccess()
     {
-        var cli = new FlurlClient(_fixture.Client);
-        var response = await cli.Request("people").PostJsonAsync(new PersonRequest {
+        var request = new PersonRequest
+        {
             Apelido = "Apelido1",
             Nascimento = DateTime.Now.AddYears(-10),
-            Nome = "Nome1" ,
-            Stack = new List<string> { "Java", "C#", "Html"}
-        });
+            Nome = "Nome1",
+            Stack = new List<string> { "Java", "C#", "Html" }
+        };
 
-        response.ResponseMessage.EnsureSuccessStatusCode();
+        var response = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+        response.EnsureSuccessStatusCode();
 
-        var sut = await response.ResponseMessage.Content.ReadAsStringAsync();
+        var sut = await response.Content.ReadAsStringAsync();
 
         sut.Should().Be("pong");
     }

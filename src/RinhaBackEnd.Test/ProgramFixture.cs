@@ -1,9 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using RinhaBackEnd.Infra.Contexts;
-using System.Diagnostics;
-using System;
-
-namespace RinhaBackEnd.Test;
+﻿namespace RinhaBackEnd.Test;
 
 public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
 {
@@ -34,8 +29,19 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
 
 
         DropTestDatabases();
+        CreateDatabaseFolder();
     }
 
+    private void CreateDatabaseFolder()
+    {
+        var appdb = new SqliteConnection(Configuration.GetConnectionString("PeopleDbConnection"));
+        if (!File.Exists(appdb.DataSource))
+        {
+            var path = Path.Combine(Environment.CurrentDirectory, "App_Data");
+
+            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+        }
+    }
     private void DropTestDatabases()
     {
         var appdb = new SqliteConnection(Configuration.GetConnectionString("PeopleDbConnection"));
@@ -59,7 +65,6 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
 
             services.AddDbContext<PeopleDbContext>(options =>
             {
-
                 var sqliteConnectionString = Configuration.GetConnectionString("PeopleDbConnection");
 
                 sqliteConnectionString = sqliteConnectionString.Replace("./", Environment.CurrentDirectory + "/", StringComparison.OrdinalIgnoreCase);
@@ -68,7 +73,6 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
 
             }, ServiceLifetime.Scoped);
         });
-
 
         base.ConfigureWebHost(builder);
     }
@@ -83,6 +87,7 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
         }
         return base.CreateHost(builder);
     }
+
     public void Dispose()
     {
         Dispose(true);
