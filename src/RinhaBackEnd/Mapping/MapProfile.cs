@@ -8,7 +8,8 @@ namespace RinhaBackEnd.Mapping
     {
         public MapProfile()
         {
-            CreateMap<Person, PersonResponse>();
+            CreateMap<Person, PersonResponse>()
+                .ForMember(p => p.Stack, opts => opts.MapFrom(p => p.PersonStacks.Select(ps => ps.Stack.Nome)));
             CreateMap<Stack, string>()
                 .ConvertUsing(p => p.Nome);
         }

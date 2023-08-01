@@ -22,6 +22,9 @@ public static class JsonExtensions
 
         if (string.IsNullOrEmpty(json)) return default!;
 
-        return JsonSerializer.Deserialize<T>(json)!;
+        return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        })!;
     }
 }

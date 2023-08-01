@@ -50,7 +50,6 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
             File.Delete(appdb.DataSource);
     }
 
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseContentRoot(Environment.CurrentDirectory)
@@ -61,7 +60,9 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
         {
             var serviceProvider = services.BuildServiceProvider();
 
-            services.Remove(ServiceDescriptor.Scoped(typeof(PeopleDbContext), typeof(PeopleDbContext)));
+            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<PeopleDbContext>));
+            if (descriptor != null)
+                services.Remove(descriptor);
 
             services.AddDbContext<PeopleDbContext>(options =>
             {

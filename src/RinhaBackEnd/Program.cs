@@ -50,7 +50,13 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper) =>
 {
-    return Results.Ok(await dbContext.People.Where(p => p.Id == id).ProjectTo<PersonResponse>(mapper.ConfigurationProvider).FirstOrDefaultAsync());
+    var result = await dbContext.People
+                                .Include(p => p.PersonStacks)
+                                .ThenInclude(p => p.Stack)
+                                .Where(p => p.Id == id)
+                                .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
+                                .FirstOrDefaultAsync();
+    return Results.Ok(result);
 });
 
 app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string t, PeopleDbContext dbContext, IMapper mapper) =>
@@ -59,7 +65,13 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string t, PeopleDbContext 
     query = query.Or(p => EF.Functions.Like(p.Nome, $"%{t}%"));
     query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{t}%"));
     query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{t}%")));
-    return Results.Ok(await dbContext.People.Where(query).ProjectTo<PersonResponse>(mapper.ConfigurationProvider).ToListAsync());
+    var result = await dbContext.People
+                                .Include(p => p.PersonStacks)
+                                .ThenInclude(p => p.Stack)
+                                .Where(query)
+                                .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
+                                .ToListAsync();
+    return Results.Ok(result);
 });
 
 app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) =>

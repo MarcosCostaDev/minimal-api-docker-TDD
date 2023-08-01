@@ -11,6 +11,7 @@ public class PeopleDbContext : DbContext
 
     public PeopleDbContext([NotNull] DbContextOptions<PeopleDbContext> options) : base(options)
     {
+       Database.EnsureCreated();
     }
 
     protected override void OnModelCreating(ModelBuilder builder)

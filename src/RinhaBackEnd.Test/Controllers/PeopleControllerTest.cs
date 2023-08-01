@@ -1,10 +1,12 @@
 ﻿
+using Microsoft.Extensions.DependencyInjection;
 using RinhaBackEnd.Test.Extensions;
+using System;
 
 namespace RinhaBackEnd.Test.Controllers;
 
 [Collection("API")]
-public class PeopleControllerTest
+public class PeopleControllerTest : IDisposable
 {
     private ProgramFixture _fixture;
     private ITestOutputHelper _output;
@@ -13,8 +15,6 @@ public class PeopleControllerTest
     {
         _fixture = fixture;
         _output = output;
-
-
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class PeopleControllerTest
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Should().Be(request.Nascimento);
+        sut.Nascimento.Should().Be(request.Nascimento.Date);
         sut.Stack.Should().Contain(request.Stack);
     }
 
@@ -66,12 +66,12 @@ public class PeopleControllerTest
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Should().Be(request.Nascimento);
+        sut.Nascimento.Should().Be(request.Nascimento.Date);
         sut.Stack.Should().Contain(request.Stack);
     }
 
     [Fact]
-    public async Task QueryPersonShouldBe10()
+    public async Task QueryPersonShouldBe4()
     {
         for (int i = 0; i < 10; i++)
         {
@@ -87,12 +87,14 @@ public class PeopleControllerTest
             createReponse.EnsureSuccessStatusCode();
         }
 
-        var response = await _fixture.Client.GetAsync("/pessoas?t=apelido");
+        var response = await _fixture.Client.GetAsync("/pessoas?t=Java");
         response.EnsureSuccessStatusCode();
 
-        var sut = await response.Content.ReadAsStringAsync();
+        var responseText = await response.Content.ReadAsStringAsync();
 
-        sut.Should().Be("10");
+        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
+
+        sut.Should().HaveCount(4);
     }
 
     [Fact]
@@ -103,7 +105,7 @@ public class PeopleControllerTest
             var request = new PersonRequest
             {
                 Apelido = $"Apelido{i}",
-                Nascimento = DateTime.Now.AddYears(-10),
+                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)),
                 Nome = $"Nome{i}",
                 Stack = GetLanguages().ElementAt(i) 
             };
@@ -131,5 +133,24 @@ public class PeopleControllerTest
         yield return new string[] { "Rush", "C", "C++" };
         yield return new string[] { "Python", "Java", "C++" };
         yield return new string[] { "Python", "CSharp", "Elixir" };
+    }
+
+    public async Task DisposeAsync(bool dispose)
+    {
+        if (!dispose) return;
+        using var scope = _fixture.Server.Services.CreateScope();
+        using var appDbContext = scope.ServiceProvider.GetRequiredService<PeopleDbContext>();
+
+        var people = await appDbContext.People.ToListAsync();
+        var stack = await appDbContext.Stacks.ToListAsync();
+
+        appDbContext.People.RemoveRange(people);
+
+        await appDbContext.SaveChangesAsync();
+    }
+
+    public void Dispose()
+    {
+        DisposeAsync(true).GetAwaiter().GetResult();
     }
 }
