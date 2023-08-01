@@ -16,3 +16,7 @@ global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Hosting;
 global using Xunit.Abstractions;
 global using RinhaBackEnd.Dtos.Requests;
+global using RinhaBackEnd.Infra.Contexts;
+global using System.Text.Json;
+global using Microsoft.Net.Http.Headers;
+global using RinhaBackEnd.Dtos.Response;

@@ -20,29 +20,63 @@ var app = builder.Build();
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper) => {
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper) =>
+{
+    var contract = new Contract<Notification>();
+
     var person = new Person(request.Apelido, request.Nome, request.Nascimento);
-    if (!person.IsValid) return Results.UnprocessableEntity(request);
-    dbContext.People.Add(person);   
-    dbContext.SaveChanges();
-    return Results.Created(new Uri($"/pessoas/{person.Id}"), mapper.Map<PersonResponse>(person));
+
+    dbContext.People.Add(person);
+
+    contract.AddNotifications(person);
+
+    foreach (var stackName in request.Stack)
+    {
+        var stack = new Stack(stackName);
+
+        var personStack = new PersonStack(person, stack);
+
+        dbContext.PersonStacks.Add(personStack);
+
+        contract.AddNotifications(personStack);
+    }
+
+    if (!contract.IsValid) return Results.UnprocessableEntity(request);
+
+    await dbContext.SaveChangesAsync();
+
+    return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), mapper.Map<PersonResponse>(person));
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper) =>
 {
-   return Results.Ok(await dbContext.People.Where(p => p.Id == id).ProjectTo<PersonResponse>(mapper.ConfigurationProvider).FirstOrDefaultAsync());
+    var result = await dbContext.People
+                                .Include(p => p.PersonStacks)
+                                .ThenInclude(p => p.Stack)
+                                .Where(p => p.Id == id)
+                                .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
+                                .FirstOrDefaultAsync();
+    return Results.Ok(result);
 });
 
 app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string t, PeopleDbContext dbContext, IMapper mapper) =>
 {
     var query = PredicateBuilder.New<Person>();
-    query = query.And(p => EF.Functions.Like(p.Nome, $"%{t}%"));
+    query = query.Or(p => EF.Functions.Like(p.Nome, $"%{t}%"));
     query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{t}%"));
-    return Results.Ok(await dbContext.People.Where(query).ProjectTo<PersonResponse>(mapper.ConfigurationProvider).ToListAsync());
+    query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{t}%")));
+    var result = await dbContext.People
+                                .Include(p => p.PersonStacks)
+                                .ThenInclude(p => p.Stack)
+                                .Where(query)
+                                .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
+                                .ToListAsync();
+    return Results.Ok(result);
 });
 
-app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) => {
-    return Results.Ok(dbContext.People.Count());
+app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) =>
+{
+    return Results.Ok(await dbContext.People.CountAsync());
 });
 
 if (app.Environment.IsDevelopment())

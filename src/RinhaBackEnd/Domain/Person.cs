@@ -10,12 +10,12 @@ namespace RinhaBackEnd.Domain
             Id = Guid.NewGuid();
             Apelido = apelido;
             Nome = nome;
-            Nascimento = nascimento;
+            Nascimento = nascimento.Date;
 
             var contract = new Contract<Notification>();
             contract.IsNotNullOrEmpty(Apelido, nameof(Apelido))
                     .IsNotNullOrEmpty(Nome, nameof(Nome))
-                    .IsBetween(Nascimento, DateTime.MinValue, DateTime.MaxValue, nameof(Nascimento));
+                    .IsBetween(Nascimento, new DateTime(1900, 01, 01), DateTime.Now.Date, nameof(Nascimento));
             AddNotifications(contract);
         }
 
