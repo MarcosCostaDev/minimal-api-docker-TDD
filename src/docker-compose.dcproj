@@ -3,9 +3,9 @@
   <PropertyGroup Label="Globals">
     <ProjectVersion>2.1</ProjectVersion>
     <DockerTargetOS>Linux</DockerTargetOS>
-    <ProjectGuid>78942274-8abf-4069-a47e-dd6d7c73adee</ProjectGuid>
+    <ProjectGuid>92254092-8bf4-4ef3-a01b-104a3593d276</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
+    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
     <DockerServiceName>rinhabackend</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>

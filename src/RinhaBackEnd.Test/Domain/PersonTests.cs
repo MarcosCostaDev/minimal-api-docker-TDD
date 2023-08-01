@@ -20,6 +20,7 @@ public class PersonTests
         sut.IsValid.Should().BeTrue();
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
+        sut.Apelido.Should().Be(apelido);
         sut.Nascimento.Should().Be(nascimento.Date);
     }
 
@@ -36,6 +37,7 @@ public class PersonTests
         sut.IsValid.Should().BeFalse();
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
+        sut.Apelido.Should().Be(apelido);
         sut.Nascimento.Should().Be(nascimento.Date);
     }
 
@@ -52,6 +54,7 @@ public class PersonTests
         sut.IsValid.Should().BeFalse();
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
+        sut.Apelido.Should().Be(apelido);
         sut.Nascimento.Should().Be(nascimento.Date);
     }
 
@@ -68,6 +71,7 @@ public class PersonTests
         sut.IsValid.Should().BeFalse();
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
+        sut.Apelido.Should().Be(apelido);
         sut.Nascimento.Should().Be(nascimento.Date);
     }
 }
