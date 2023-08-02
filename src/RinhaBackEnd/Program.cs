@@ -21,7 +21,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
     options.InstanceName = "RinhaBackend";
-  
+
 });
 
 builder.Services.AddCustomAutoMapper();
@@ -72,8 +72,8 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, People
                         .Where(p => p.Id == id)
                         .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
                         .FirstOrDefaultAsync();
-    });
-   
+    }, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(1) });
+
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
 });
 

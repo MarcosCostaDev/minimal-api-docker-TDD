@@ -1,8 +1,10 @@
-﻿namespace RinhaBackEnd.Extensions;
+﻿using Microsoft.Extensions.Caching.Distributed;
+
+namespace RinhaBackEnd.Extensions;
 
 public static class CacheExtensions
 {
-    public static T GetOrCreate<T>(this IDistributedCache cache, string key, Func<T> action) where T : class
+    public static T GetOrCreate<T>(this IDistributedCache cache, string key, Func<T> action, DistributedCacheEntryOptions options) where T : class
     {
         var retriveCache = cache.Get(key);
 
@@ -16,16 +18,16 @@ public static class CacheExtensions
         if (result != null)
         {
             var json = result.ToJson();
-            cache.Set(key, Encoding.UTF8.GetBytes(json));
+            cache.Set(key, Encoding.UTF8.GetBytes(json), options);
             return result;
         }
         return null!;
     }
 
-    public static string GetOrCreateString<T>(this IDistributedCache cache, string key, Func<T> action) where T : class
+    public static string GetOrCreateString<T>(this IDistributedCache cache, string key, Func<T> action, DistributedCacheEntryOptions options) where T : class
     {
         var retriveCache = cache.GetString(key);
-
+        
         if (!string.IsNullOrEmpty(retriveCache)) return retriveCache;
 
         dynamic execute = action.Invoke();
@@ -34,7 +36,7 @@ public static class CacheExtensions
         if (result != null)
         {
             var json = result.ToJson();
-            cache.Set(key, Encoding.UTF8.GetBytes(json));
+            cache.Set(key, Encoding.UTF8.GetBytes(json), options);
             return json;
         }
 
