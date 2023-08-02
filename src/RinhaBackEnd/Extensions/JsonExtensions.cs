@@ -1,7 +1,4 @@
-﻿
-
-
-namespace RinhaBackEnd.Test.Extensions;
+﻿namespace RinhaBackEnd.Extensions;
 
 public static class JsonExtensions
 {

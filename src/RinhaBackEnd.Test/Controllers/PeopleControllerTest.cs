@@ -1,6 +1,4 @@
-﻿using RinhaBackEnd.Test.Extensions;
-
-namespace RinhaBackEnd.Test.Controllers;
+﻿namespace RinhaBackEnd.Test.Controllers;
 
 [Collection("API")]
 public class PeopleControllerTest : IDisposable
@@ -92,7 +90,15 @@ public class PeopleControllerTest : IDisposable
     }
 
     [Fact]
-    public async Task QueryPersonShouldBe4()
+    public async Task GetPersonShouldBeFail404()
+    {
+        var response = await _fixture.Client.GetAsync($"/pessoas/{Guid.NewGuid()}");
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task QueryPersonShouldFind4()
     {
         for (int i = 0; i < 10; i++)
         {
@@ -116,6 +122,33 @@ public class PeopleControllerTest : IDisposable
         var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
 
         sut.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task QueryPersonShouldFind0()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            var request = new PersonRequest
+            {
+                Apelido = $"Apelido{i}",
+                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)),
+                Nome = $"Nome{i}",
+                Stack = GetLanguages().ElementAt(i)
+            };
+
+            var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+            createReponse.EnsureSuccessStatusCode();
+        }
+
+        var response = await _fixture.Client.GetAsync("/pessoas?t=Cobol");
+        response.EnsureSuccessStatusCode();
+
+        var responseText = await response.Content.ReadAsStringAsync();
+
+        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
+
+        sut.Should().HaveCount(0);
     }
 
     [Fact]
