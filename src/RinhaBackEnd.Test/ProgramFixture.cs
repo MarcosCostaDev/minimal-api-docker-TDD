@@ -1,4 +1,8 @@
-﻿namespace RinhaBackEnd.Test;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
+
+namespace RinhaBackEnd.Test;
 
 public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
 {
@@ -73,6 +77,9 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
                 options.UseSqlite(sqliteConnectionString);
 
             }, ServiceLifetime.Scoped);
+
+            var cacheServiceMock = new Mock<IDistributedCache>();
+            services.Replace(ServiceDescriptor.Singleton(typeof(IDistributedCache), _ => cacheServiceMock.Object));
         });
 
         base.ConfigureWebHost(builder);
