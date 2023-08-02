@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-
-namespace RinhaBackEnd.Extensions;
+﻿namespace RinhaBackEnd.Extensions;
 
 public static class CacheExtensions
 {
