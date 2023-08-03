@@ -1,25 +1,44 @@
 version: '3.4'
 
 services:
-  rinhabackend:
-    image: ${DOCKER_REGISTRY-}rinhabackend
+  api01:
+    image: api01
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
     depends_on:
       - db
       - redis
+    ports:
+      - "80"
+      - "443"
     deploy:
       resources:
         limits:
           cpus: '0.25'
-          memory: '0.5GB'
+          memory: '0.25GB'
+  api02:
+    image: api02
+    build:
+      context: .
+      dockerfile: RinhaBackEnd/Dockerfile
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "80"
+      - "443"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: '0.25GB'
   db:
     image: 'postgres:latest'
     deploy:
       resources:
         limits:
-          cpus: '0.75'
+          cpus: '0.60'
           memory: '1.5GB'
     ports:
        - 5432:5432
@@ -32,3 +51,22 @@ services:
     container_name: cache
     ports:
       - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: '0.3GB'
+  proxy:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api01
+      - api02
+    ports:
+      - "9999:9999"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: '0.5GB'

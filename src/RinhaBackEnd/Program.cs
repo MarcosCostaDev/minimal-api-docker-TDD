@@ -34,7 +34,7 @@ app.UseForwardedHeaders();
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
 {
     var contract = new Contract<Notification>();
 
@@ -59,12 +59,16 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
     await dbContext.SaveChangesAsync();
 
-    return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), mapper.Map<PersonResponse>(person));
+    var result = mapper.Map<PersonResponse>(person);
+
+    cache.SetString(person.Id.ToString(), result.ToJson());
+
+    return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
 {
-    var result = cache.GetOrCreateString(id.ToString(), () =>
+    var result = await cache.GetOrCreateStringAsync(id.ToString(), () =>
     {
         return dbContext.People
                         .Include(p => p.PersonStacks)
@@ -72,17 +76,17 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, People
                         .Where(p => p.Id == id)
                         .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
                         .FirstOrDefaultAsync();
-    }, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(1) });
+    });
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
 });
 
-app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string t, PeopleDbContext dbContext, IMapper mapper) =>
+app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbContext dbContext, IMapper mapper) =>
 {
     var query = PredicateBuilder.New<Person>();
-    query = query.Or(p => EF.Functions.Like(p.Nome, $"%{t}%"));
-    query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{t}%"));
-    query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{t}%")));
+    query = query.Or(p => EF.Functions.Like(p.Nome, $"%{search}%"));
+    query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{search}%"));
+    query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{search}%")));
     var result = await dbContext.People
                                 .Include(p => p.PersonStacks)
                                 .ThenInclude(p => p.Stack)
@@ -103,7 +107,6 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
     app.UseMigrationsEndPoint();
 }
-
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>

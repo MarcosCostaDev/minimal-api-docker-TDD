@@ -6,7 +6,7 @@
     <ProjectGuid>92254092-8bf4-4ef3-a01b-104a3593d276</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
-    <DockerServiceName>rinhabackend</DockerServiceName>
+    <DockerServiceName>proxy</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
     <None Include="docker-compose.override.yml">
@@ -14,5 +14,7 @@
     </None>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
+    <None Include="nginx.conf" />
+    <None Include="nginx.Dockerfile" />
   </ItemGroup>
 </Project>
