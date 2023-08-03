@@ -11,7 +11,7 @@ public class PeopleDbContext : DbContext
 
     public PeopleDbContext([NotNull] DbContextOptions<PeopleDbContext> options) : base(options)
     {
-       Database.EnsureCreated();
+
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -22,6 +22,7 @@ public class PeopleDbContext : DbContext
         {
             entity.ToTable("People");
             entity.HasKey(p => p.Id);
+            entity.HasIndex(p => p.Apelido).IsUnique();
         });
 
         builder.Entity<Stack>(entity =>

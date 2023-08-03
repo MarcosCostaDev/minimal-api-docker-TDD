@@ -1,0 +1,11 @@
+version: '3.4'
+
+services:
+  api01:
+    build:
+      context: .
+      dockerfile: RinhaBackEnd/prod.Dockerfile
+  api02:
+    build:
+      context: .
+      dockerfile: RinhaBackEnd/prod.Dockerfile

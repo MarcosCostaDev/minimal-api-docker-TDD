@@ -62,6 +62,12 @@ namespace RinhaBackEnd.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_People_Apelido",
+                table: "People",
+                column: "Apelido",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PersonStacks_PersonId",
                 table: "PersonStacks",
                 column: "PersonId");
