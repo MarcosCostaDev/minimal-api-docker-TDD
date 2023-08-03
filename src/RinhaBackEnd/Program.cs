@@ -61,7 +61,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
     var result = mapper.Map<PersonResponse>(person);
 
-    cache.SetString(person.Id.ToString(), result.ToJson(), new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromSeconds(30) });
+    cache.SetString(person.Id.ToString(), result.ToJson());
 
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
@@ -76,17 +76,17 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, People
                         .Where(p => p.Id == id)
                         .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
                         .FirstOrDefaultAsync();
-    }, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromSeconds(30) });
+    });
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
 });
 
-app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string t, PeopleDbContext dbContext, IMapper mapper) =>
+app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbContext dbContext, IMapper mapper) =>
 {
     var query = PredicateBuilder.New<Person>();
-    query = query.Or(p => EF.Functions.Like(p.Nome, $"%{t}%"));
-    query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{t}%"));
-    query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{t}%")));
+    query = query.Or(p => EF.Functions.Like(p.Nome, $"%{search}%"));
+    query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{search}%"));
+    query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{search}%")));
     var result = await dbContext.People
                                 .Include(p => p.PersonStacks)
                                 .ThenInclude(p => p.Stack)
