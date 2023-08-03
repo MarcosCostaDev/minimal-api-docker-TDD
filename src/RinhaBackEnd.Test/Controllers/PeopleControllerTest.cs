@@ -38,6 +38,33 @@ public class PeopleControllerTest : IDisposable
     }
 
     [Fact]
+    public async Task CreateRepeatedPersonShouldFail422()
+    {
+        var request = new PersonRequest
+        {
+            Apelido = "Apelido1",
+            Nascimento = DateTime.Now.AddYears(-10),
+            Nome = "Nome1",
+            Stack = new List<string> { "Java", "C#", "Html" }
+        };
+
+        var response1 = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+        response1.EnsureSuccessStatusCode();
+
+        var response2 = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
+
+        var responseText = await response2.Content.ReadAsStringAsync();
+
+        var sut = responseText.DeserializeTo<PersonResponse>();
+
+        response2.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
+        sut.Nome.Should().Be(request.Nome);
+        sut.Apelido.Should().Be(request.Apelido);
+        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
+        sut.Stack.Should().Contain(request.Stack);
+    }
+
+    [Fact]
     public async Task CreatePersonShouldFailStatus422()
     {
         var request = new PersonRequest

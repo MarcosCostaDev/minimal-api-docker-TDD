@@ -82,8 +82,10 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
             services.Replace(ServiceDescriptor.Singleton(typeof(IDistributedCache), _ => cacheServiceMock.Object));
         });
 
+
         base.ConfigureWebHost(builder);
     }
+
     protected override IHost CreateHost(IHostBuilder builder)
     {
         var appdb = new SqliteConnection(Configuration.GetConnectionString("PeopleDbConnection"));
@@ -93,7 +95,13 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
             var path = Path.Combine(Environment.CurrentDirectory, "App_Data");
             if (!Directory.Exists(path)) Directory.CreateDirectory(path);
         }
-        return base.CreateHost(builder);
+        var app = base.CreateHost(builder);
+
+        var dbContext = app.Services.GetRequiredService<PeopleDbContext>();
+
+        dbContext.Database.EnsureCreated();
+
+        return app;
     }
 
     public void Dispose()

@@ -41,6 +41,9 @@ namespace RinhaBackEnd.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Apelido")
+                        .IsUnique();
+
                     b.ToTable("People", (string)null);
                 });
 

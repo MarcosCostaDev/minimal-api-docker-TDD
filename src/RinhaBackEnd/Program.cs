@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using RinhaBackEnd.CustomConfig;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
@@ -57,7 +58,14 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
     if (!contract.IsValid) return Results.UnprocessableEntity(request);
 
-    await dbContext.SaveChangesAsync();
+    try
+    {
+        await dbContext.SaveChangesAsync();
+    }
+    catch (Exception)
+    {
+        return Results.UnprocessableEntity(request);
+    }
 
     var result = mapper.Map<PersonResponse>(person);
 
@@ -107,6 +115,15 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
     app.UseMigrationsEndPoint();
 }
+
+using (IServiceScope scope = app.Services.CreateScope())
+    try
+    {
+        scope.ServiceProvider.GetService<PeopleDbContext>().Database.Migrate();
+    }
+    catch 
+    {
+    }
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
