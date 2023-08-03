@@ -34,7 +34,7 @@ app.UseForwardedHeaders();
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
 {
     var contract = new Contract<Notification>();
 
@@ -59,12 +59,16 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
     await dbContext.SaveChangesAsync();
 
-    return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), mapper.Map<PersonResponse>(person));
+    var result = mapper.Map<PersonResponse>(person);
+
+    cache.SetString(person.Id.ToString(), result.ToJson(), new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromSeconds(30) });
+
+    return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
 {
-    var result = cache.GetOrCreateString(id.ToString(), () =>
+    var result = await cache.GetOrCreateStringAsync(id.ToString(), () =>
     {
         return dbContext.People
                         .Include(p => p.PersonStacks)
@@ -72,7 +76,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, People
                         .Where(p => p.Id == id)
                         .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
                         .FirstOrDefaultAsync();
-    }, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(1) });
+    }, new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromSeconds(30) });
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
 });
