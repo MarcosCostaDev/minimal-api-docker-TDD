@@ -53,7 +53,6 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         using var appDbContext = new PeopleDbContext(buildOptions.Options);
 
         var people = await appDbContext.People.ToListAsync();
-        var stack = await appDbContext.Stacks.ToListAsync();
 
         appDbContext.People.RemoveRange(people);
 

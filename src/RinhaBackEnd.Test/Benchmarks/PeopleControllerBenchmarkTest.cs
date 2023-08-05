@@ -13,9 +13,16 @@ public class PeopleControllerBenchmarkTest : PeopleControllerTest
     }
 
     [GlobalSetup]
-    public void Setup()
+    public void GlobalSetup()
     {
         Thread.Sleep(TimeSpan.FromSeconds(10));
+    }
+
+    [IterationSetup]
+    public void IterationSetup()
+    {
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+        base.CleanDatabaseAsync().ConfigureAwait(false).GetAwaiter();
     }
 
     [IterationCleanup]

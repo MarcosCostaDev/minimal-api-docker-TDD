@@ -8,7 +8,7 @@ public class Person : Notifiable<Notification>
         Id = Guid.NewGuid();
         Apelido = apelido;
         Nome = nome;
-        Nascimento = nascimento.Date;
+        Nascimento = nascimento;
 
         var contract = new Contract<Notification>();
         contract.IsNotNullOrEmpty(Apelido, nameof(Apelido))
