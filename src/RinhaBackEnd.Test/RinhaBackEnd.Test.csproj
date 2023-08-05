@@ -7,14 +7,28 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\RinhaBackEnd\appsettings.Benchmark.json" Link="appsettings.Benchmark.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\RinhaBackEnd\appsettings.Testing.json" Link="appsettings.Testing.json" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\docker-compose.testing.yml" Link="docker-compose.testing.yml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\docker-compose.yml" Link="docker-compose.yml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.6" />
     <PackageReference Include="coverlet.collector" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="DockerComposeFixture" Version="1.1.0" />
     <PackageReference Include="FluentAssertions" Version="6.11.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="7.0.9" />
@@ -30,6 +44,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RinhaBackEnd\RinhaBackEnd.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 ﻿using RinhaBackEnd.Domain;
 
 namespace RinhaBackEnd.Test.Domain;
-
+[Trait("Unit", "Domain")]
 public class StackTests
 {
     [Fact]

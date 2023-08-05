@@ -1,5 +1,7 @@
-﻿using RinhaBackEnd.Domain;
-using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.Extensions.Configuration;
+using RinhaBackEnd.Domain;
+using System.Linq.Expressions;
 
 namespace RinhaBackEnd.Infra.Contexts;
 
@@ -14,6 +16,12 @@ public class PeopleDbContext : DbContext
 
     }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+
+        configurationBuilder.Properties<DateTime>().HaveConversion(typeof(DateTimeToDateTimeUtc));
+    }
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -51,4 +59,13 @@ public class PeopleDbContext : DbContext
         builder.Ignore<Notification>()
                .Ignore<Notifiable<Notification>>();
     }
+}
+
+
+public class DateTimeToDateTimeUtc : ValueConverter<DateTime, DateTime>
+{
+    public DateTimeToDateTimeUtc() : base(ToUtc, ToLocalTime) { }
+
+    readonly static Expression<Func<DateTime, DateTime>> ToUtc = c => DateTime.SpecifyKind(c, DateTimeKind.Local).ToUniversalTime();
+    readonly static Expression<Func<DateTime, DateTime>> ToLocalTime = c => DateTime.SpecifyKind(c, DateTimeKind.Utc).ToLocalTime();
 }
