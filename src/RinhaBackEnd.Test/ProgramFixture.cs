@@ -1,10 +1,8 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Moq;
+﻿using RinhaBackEnd.Test.Interfaces;
 
 namespace RinhaBackEnd.Test;
 
-public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
+public class ProgramFixture : WebApplicationFactory<Program>, IIntegrationTest, IDisposable
 {
     private HttpClient _httpClient;
     public HttpClient Client
@@ -86,7 +84,7 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
         base.ConfigureWebHost(builder);
     }
 
-    protected override IHost CreateHost(IHostBuilder builder)
+    protected override Microsoft.Extensions.Hosting.IHost CreateHost(IHostBuilder builder)
     {
         var appdb = new SqliteConnection(Configuration.GetConnectionString("PeopleDbConnection"));
 
@@ -111,6 +109,7 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
+
         if (disposing)
         {
             Server.Dispose();
@@ -118,9 +117,16 @@ public class ProgramFixture : WebApplicationFactory<Program>, IDisposable
         }
     }
 
-}
+    public async Task ClearDatabaseAsync()
+    {
+        using var scope = Server.Services.CreateScope();
+        using var appDbContext = scope.ServiceProvider.GetRequiredService<PeopleDbContext>();
 
-[CollectionDefinition("API", DisableParallelization = true)]
-public class StartupFixtureCollection : ICollectionFixture<ProgramFixture>
-{
+        var people = await appDbContext.People.ToListAsync();
+        var stack = await appDbContext.Stacks.ToListAsync();
+
+        appDbContext.People.RemoveRange(people);
+
+        await appDbContext.SaveChangesAsync();
+    }
 }

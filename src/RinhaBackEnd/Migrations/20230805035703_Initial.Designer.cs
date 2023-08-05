@@ -12,7 +12,7 @@ using RinhaBackEnd.Infra.Contexts;
 namespace RinhaBackEnd.Migrations
 {
     [DbContext(typeof(PeopleDbContext))]
-    [Migration("20230803022319_Initial")]
+    [Migration("20230805035703_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

@@ -18,7 +18,7 @@ namespace RinhaBackEnd.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Apelido = table.Column<string>(type: "text", nullable: false),
                     Nome = table.Column<string>(type: "text", nullable: false),
-                    Nascimento = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Nascimento = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
                 {
