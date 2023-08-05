@@ -33,7 +33,7 @@ namespace RinhaBackEnd.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("Nascimento")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("date");
 
                     b.Property<string>("Nome")
                         .IsRequired()

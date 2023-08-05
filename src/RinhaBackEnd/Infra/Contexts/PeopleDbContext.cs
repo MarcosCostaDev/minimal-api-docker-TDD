@@ -20,7 +20,7 @@ public class PeopleDbContext : DbContext
     {
         base.ConfigureConventions(configurationBuilder);
 
-        configurationBuilder.Properties<DateTime>().HaveConversion(typeof(DateTimeToDateTimeUtc));
+        //configurationBuilder.Properties<DateTime>().HaveConversion(typeof(DateTimeToDateTimeUtc));
     }
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -31,6 +31,7 @@ public class PeopleDbContext : DbContext
             entity.ToTable("People");
             entity.HasKey(p => p.Id);
             entity.HasIndex(p => p.Apelido).IsUnique();
+            entity.Property(p => p.Nascimento).HasColumnType("date");
         });
 
         builder.Entity<Stack>(entity =>

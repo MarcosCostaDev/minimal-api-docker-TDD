@@ -37,7 +37,7 @@ public class PeopleControllerTest : IDisposable
     {
         var request = new PersonRequest
         {
-            Apelido = $"Apelido{Guid.NewGuid().ToString().Take(4)}",
+            Apelido = $"Apelido{Guid.NewGuid().ToString().Take(2).ToString()}",
             Nascimento = DateTime.Now.AddYears(-10).Date,
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
@@ -53,7 +53,7 @@ public class PeopleControllerTest : IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        //  sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
+        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
         sut.Stack.Should().Contain(request.Stack);
     }
 
@@ -63,7 +63,7 @@ public class PeopleControllerTest : IDisposable
     {
         var request = new PersonRequest
         {
-            Apelido = $"Apelido{Guid.NewGuid().ToString().Take(4)}",
+            Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
             Nascimento = DateTime.Now.AddYears(-10).Date,
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
@@ -116,7 +116,7 @@ public class PeopleControllerTest : IDisposable
     {
         var request = new PersonRequest
         {
-            Apelido = $"Apelido{Guid.NewGuid().ToString().Take(4)}",
+            Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
             Nascimento = DateTime.Now.AddYears(-10).Date,
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
@@ -156,7 +156,7 @@ public class PeopleControllerTest : IDisposable
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}",
+                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
                 Nascimento = DateTime.Now.AddYears(-3 * (i + 1)).Date,
                 Nome = $"Nome{i}",
                 Stack = GetLanguages().ElementAt(i)
@@ -184,7 +184,7 @@ public class PeopleControllerTest : IDisposable
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString().Take(4)}",
+                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
                 Nascimento = DateTime.Now.AddYears(-3 * (i + 1)).Date,
                 Nome = $"Nome{i}",
                 Stack = GetLanguages().ElementAt(i)
@@ -212,7 +212,7 @@ public class PeopleControllerTest : IDisposable
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString().Take(4)}",
+                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
                 Nascimento = DateTime.Now.AddYears(-3 * (i + 1)),
                 Nome = $"Nome{i}",
                 Stack = GetLanguages().ElementAt(i)
