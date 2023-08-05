@@ -5,7 +5,7 @@ name: .NET
   
 on:
   push:
-    branches: [ "feature/build-deploy" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
