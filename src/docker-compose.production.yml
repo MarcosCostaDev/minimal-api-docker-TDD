@@ -4,8 +4,8 @@ services:
   api01:
     build:
       context: .
-      dockerfile: RinhaBackEnd/prod.Dockerfile
+      dockerfile: prod.Dockerfile
   api02:
     build:
       context: .
-      dockerfile: RinhaBackEnd/prod.Dockerfile
+      dockerfile: prod.Dockerfile

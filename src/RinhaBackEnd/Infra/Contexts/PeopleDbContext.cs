@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Configuration;
 using RinhaBackEnd.Domain;
+using System.Linq.Expressions;
 
 namespace RinhaBackEnd.Infra.Contexts;
 
@@ -18,11 +19,8 @@ public class PeopleDbContext : DbContext
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
-        if(Database.IsNpgsql())
-        {
-            configurationBuilder.Properties<DateTime>().HaveConversion(typeof(DateTimeToDateTimeUtc));
-        }
 
+        configurationBuilder.Properties<DateTime>().HaveConversion(typeof(DateTimeToDateTimeUtc));
     }
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -66,8 +64,8 @@ public class PeopleDbContext : DbContext
 
 public class DateTimeToDateTimeUtc : ValueConverter<DateTime, DateTime>
 {
-    public DateTimeToDateTimeUtc() : base(c => DateTime.SpecifyKind(c, DateTimeKind.Local).ToUniversalTime(), c => c.ToLocalTime())
-    {
+    public DateTimeToDateTimeUtc() : base(ToUtc, ToLocalTime) { }
 
-    }
+    readonly static Expression<Func<DateTime, DateTime>> ToUtc = c => DateTime.SpecifyKind(c, DateTimeKind.Local).ToUniversalTime();
+    readonly static Expression<Func<DateTime, DateTime>> ToLocalTime = c => DateTime.SpecifyKind(c, DateTimeKind.Utc).ToLocalTime();
 }

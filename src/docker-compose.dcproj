@@ -17,5 +17,6 @@
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
     <None Include="nginx.conf" />
+    <None Include="prod.Dockerfile" />
   </ItemGroup>
 </Project>

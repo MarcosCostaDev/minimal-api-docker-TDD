@@ -47,7 +47,9 @@ public class ContainerFixture : IIntegrationTest, IDisposable
     public async Task ClearDatabaseAsync()
     {
         var buildOptions = new DbContextOptionsBuilder<PeopleDbContext>();
+
         buildOptions.UseNpgsql(Configuration.GetConnectionString("PeopleDbConnection"));
+
         using var appDbContext = new PeopleDbContext(buildOptions.Options);
 
         var people = await appDbContext.People.ToListAsync();
