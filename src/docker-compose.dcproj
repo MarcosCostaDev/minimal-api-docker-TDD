@@ -13,8 +13,13 @@
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
     <None Include="docker-compose.production.yml" />
+    <None Include="docker-compose.testing.yml" />
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
     <None Include="nginx.conf" />
+    <None Include="Production\Dockerfile" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Production\**" />
   </ItemGroup>
 </Project>

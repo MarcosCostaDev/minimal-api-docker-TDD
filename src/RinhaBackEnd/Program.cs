@@ -1,10 +1,14 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpLogging;
 using RinhaBackEnd.CustomConfig;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.Infra.Contexts;
+using System.IO;
+using static System.Net.Mime.MediaTypeNames;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +35,10 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-app.UseForwardedHeaders();
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.MapGet("/ping", () => "pong");
 
@@ -57,20 +64,17 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
     }
 
     if (!contract.IsValid) return Results.UnprocessableEntity(request);
-
+    PersonResponse result;
     try
     {
         await dbContext.SaveChangesAsync();
+        result = mapper.Map<PersonResponse>(person);
+        cache.SetString(person.Id.ToString(), result.ToJson());
     }
     catch (Exception)
     {
         return Results.UnprocessableEntity(request);
     }
-
-    var result = mapper.Map<PersonResponse>(person);
-
-    cache.SetString(person.Id.ToString(), result.ToJson());
-
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
@@ -111,17 +115,33 @@ app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) =>
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error");
     app.UseDeveloperExceptionPage();
     app.UseMigrationsEndPoint();
 }
+
+app.UseDeveloperExceptionPage();
+
+app.Use(next => context => {
+    context.Request.EnableBuffering();
+    return next(context);
+});
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(await context.Request.GetRawBodyAsync());
+    });
+});
+
 
 using (IServiceScope scope = app.Services.CreateScope())
     try
     {
         scope.ServiceProvider.GetService<PeopleDbContext>().Database.Migrate();
     }
-    catch 
+    catch(Exception ex)
     {
     }
 

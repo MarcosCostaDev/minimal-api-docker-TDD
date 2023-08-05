@@ -12,7 +12,7 @@ using RinhaBackEnd.Infra.Contexts;
 namespace RinhaBackEnd.Migrations
 {
     [DbContext(typeof(PeopleDbContext))]
-    [Migration("20230803022319_Initial")]
+    [Migration("20230805175331_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -36,7 +36,7 @@ namespace RinhaBackEnd.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime>("Nascimento")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("date");
 
                     b.Property<string>("Nome")
                         .IsRequired()
