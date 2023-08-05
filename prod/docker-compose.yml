@@ -18,7 +18,7 @@ services:
       resources:
         limits:
           cpus: '0.25'
-          memory: '0.25GB'
+          memory: '0.5GB'
   api02:
     container_name: api02
     image: api02
@@ -35,7 +35,7 @@ services:
       resources:
         limits:
           cpus: '0.25'
-          memory: '0.25GB'
+          memory: '0.5GB'
   db:
     container_name: database
     image: 'postgres:latest'
@@ -73,5 +73,5 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'
+          cpus: '0.2'
           memory: '0.5GB'

@@ -9,7 +9,7 @@ FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 
 WORKDIR /repo
 RUN apt-get install git && \
-	git clone -b release https://github.com/MarcosCostaDev/minimal-api-docker-TDD .
+	git clone -b main https://github.com/MarcosCostaDev/minimal-api-docker-TDD .
 
 WORKDIR /src
 RUN mv ../repo/src/RinhaBackEnd RinhaBackEnd/
