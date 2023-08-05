@@ -10,7 +10,7 @@ public class PersonTests
         // Arrange
         var apelido = "Doe";
         var nome = "John";
-        var nascimento = DateTime.Now;
+        var nascimento = DateTime.Now.AddYears(-1);
 
         // Act
         var person = new Person(apelido, nome, nascimento);
@@ -21,7 +21,7 @@ public class PersonTests
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
         sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Should().Be(nascimento.Date);
+        sut.Nascimento.Date.Should().Be(nascimento.Date);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class PersonTests
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
         sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Should().Be(nascimento.Date);
+        sut.Nascimento.Date.Should().Be(nascimento.Date);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class PersonTests
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
         sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Should().Be(nascimento.Date);
+        sut.Nascimento.Date.Should().Be(nascimento.Date);
     }
 
     [Fact]
@@ -72,6 +72,6 @@ public class PersonTests
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(nome);
         sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Should().Be(nascimento.Date);
+        sut.Nascimento.Date.Should().Be(nascimento.Date);
     }
 }

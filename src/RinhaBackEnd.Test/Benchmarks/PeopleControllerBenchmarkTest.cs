@@ -2,7 +2,7 @@
 
 namespace RinhaBackEnd.Test.Benchmarks;
 
-[Trait("ignore", "ignore")]
+[Trait("Integration", "ignore")]
 [SimpleJob(RunStrategy.Monitoring, iterationCount: 10, id: nameof(PeopleControllerBenchmarkTest))]
 [RankColumn, MinColumn, MaxColumn, Q1Column, Q3Column, AllStatisticsColumn]
 public class PeopleControllerBenchmarkTest : PeopleControllerTest
