@@ -87,6 +87,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, People
                         .ThenInclude(p => p.Stack)
                         .Where(p => p.Id == id)
                         .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
+                        .AsNoTracking()
                         .FirstOrDefaultAsync();
     });
 
@@ -103,6 +104,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbCon
                                 .Include(p => p.PersonStacks)
                                 .ThenInclude(p => p.Stack)
                                 .Where(query)
+                                .AsNoTracking()
                                 .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
                                 .ToListAsync();
     return Results.Ok(result);
@@ -110,7 +112,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbCon
 
 app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) =>
 {
-    return Results.Ok(await dbContext.People.CountAsync());
+    return Results.Ok(await dbContext.People.AsNoTracking().CountAsync());
 });
 
 if (app.Environment.IsDevelopment())
