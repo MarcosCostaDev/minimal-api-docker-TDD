@@ -3,7 +3,7 @@ version: '3.4'
 services:
   api01:
     container_name: api01
-    image: api01
+    image: rinhabackend
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
@@ -20,7 +20,7 @@ services:
           memory: '0.25GB'
   api02:
     container_name: api02
-    image: api02
+    image: rinhabackend
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
