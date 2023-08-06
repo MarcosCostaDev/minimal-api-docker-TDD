@@ -18,7 +18,6 @@ Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-co
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "prod", "prod", "{8D4E23BE-E183-4EA7-A4F9-2B7E11558085}"
 	ProjectSection(SolutionItems) = preProject
-		..\prod\Dockerfile = ..\prod\Dockerfile
 		..\prod\docker-compose.yml = ..\prod\docker-compose.yml
 		..\prod\nginx.conf = ..\prod\nginx.conf
 		..\prod\README.md = ..\prod\README.md
