@@ -8,7 +8,8 @@ public class Stack : Notifiable<Notification>
         Id = Guid.NewGuid();
         Nome = nome;
         var contract = new Contract<Notification>();
-        contract.IsNotNullOrEmpty(Nome, nameof(Nome));
+        contract.IsNotNullOrEmpty(Nome, nameof(Nome))
+                .IsLowerOrEqualsThan(Nome, 32, nameof(Nome));
         AddNotifications(contract);
     }
 

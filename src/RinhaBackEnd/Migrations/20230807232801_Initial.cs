@@ -16,8 +16,8 @@ namespace RinhaBackEnd.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Apelido = table.Column<string>(type: "text", nullable: false),
-                    Nome = table.Column<string>(type: "text", nullable: false),
+                    Apelido = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Nome = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Nascimento = table.Column<DateTime>(type: "date", nullable: false)
                 },
                 constraints: table =>
@@ -30,7 +30,7 @@ namespace RinhaBackEnd.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Nome = table.Column<string>(type: "text", nullable: false)
+                    Nome = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false)
                 },
                 constraints: table =>
                 {
