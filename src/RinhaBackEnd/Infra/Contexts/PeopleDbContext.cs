@@ -31,13 +31,16 @@ public class PeopleDbContext : DbContext
             entity.ToTable("People");
             entity.HasKey(p => p.Id);
             entity.HasIndex(p => p.Apelido).IsUnique();
+            entity.Property(p => p.Apelido).HasMaxLength(32);
             entity.Property(p => p.Nascimento).HasColumnType("date");
+            entity.Property(p => p.Nome).HasMaxLength(100);
         });
 
         builder.Entity<Stack>(entity =>
         {
             entity.ToTable("Stacks");
             entity.HasKey(p => p.Id);
+            entity.Property(p => p.Nome).HasMaxLength(32);
         });
 
         builder.Entity<PersonStack>(entity =>

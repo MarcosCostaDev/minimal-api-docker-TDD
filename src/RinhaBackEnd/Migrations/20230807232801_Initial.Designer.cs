@@ -12,7 +12,7 @@ using RinhaBackEnd.Infra.Contexts;
 namespace RinhaBackEnd.Migrations
 {
     [DbContext(typeof(PeopleDbContext))]
-    [Migration("20230805175331_Initial")]
+    [Migration("20230807232801_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -33,14 +33,16 @@ namespace RinhaBackEnd.Migrations
 
                     b.Property<string>("Apelido")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<DateTime>("Nascimento")
                         .HasColumnType("date");
 
                     b.Property<string>("Nome")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -73,7 +75,8 @@ namespace RinhaBackEnd.Migrations
 
                     b.Property<string>("Nome")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
 

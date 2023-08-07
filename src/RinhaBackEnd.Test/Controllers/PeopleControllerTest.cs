@@ -37,7 +37,7 @@ public class PeopleControllerTest : IDisposable
     {
         var request = new PersonRequest
         {
-            Apelido = $"Apelido{Guid.NewGuid().ToString().Take(2).ToString()}",
+            Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
             Nascimento = DateTime.Now.AddYears(-10).Date,
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }

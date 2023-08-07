@@ -12,7 +12,9 @@ public class Person : Notifiable<Notification>
 
         var contract = new Contract<Notification>();
         contract.IsNotNullOrEmpty(Apelido, nameof(Apelido))
+                .IsLowerOrEqualsThan(Apelido, 32, nameof(Apelido))
                 .IsNotNullOrEmpty(Nome, nameof(Nome))
+                .IsLowerOrEqualsThan(Nome, 100, nameof(Nome))
                 .IsBetween(Nascimento, new DateTime(1900, 01, 01), DateTime.Now.Date, nameof(Nascimento));
         AddNotifications(contract);
     }
