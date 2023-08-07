@@ -131,7 +131,7 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 {
     exceptionHandlerApp.Run(async context =>
     {
-        context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsync(await context.Request.GetRawBodyAsync());
     });
