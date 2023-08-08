@@ -3,7 +3,6 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Validators;
-using DockerComposeFixture;
 
 namespace RinhaBackEnd.Test.Benchmarks;
 

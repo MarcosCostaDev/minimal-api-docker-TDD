@@ -24,3 +24,5 @@ global using Microsoft.Extensions.DependencyInjection.Extensions;
 global using Moq;
 global using Xunit.Sdk;
 global using BenchmarkDotNet.Engines;
+global using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+global using System.Linq.Expressions;

@@ -1,7 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.Extensions.Configuration;
-using RinhaBackEnd.Domain;
-using System.Linq.Expressions;
+﻿using RinhaBackEnd.Domain;
 
 namespace RinhaBackEnd.Infra.Contexts;
 
