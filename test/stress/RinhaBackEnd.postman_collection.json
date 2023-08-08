@@ -1,0 +1,391 @@
+{
+	"info": {
+		"_postman_id": "4d049969-7419-4883-b336-41e33bb4071d",
+		"name": "RinhaBackEnd",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "24421285"
+	},
+	"item": [
+		{
+			"name": "ping",
+			"item": [
+				{
+					"name": "/ping",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ping"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/ping",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ping"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<string>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "pessoas",
+			"item": [
+				{
+					"name": "{id}",
+					"item": [
+						{
+							"name": "/pessoas/:id",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/pessoas/:id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pessoas",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "{{pessoasid}}"
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "Success",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/pessoas/:id",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"pessoas",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "text",
+									"header": [],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "/pessoas",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"\r",
+									"var jsonData = pm.response.json();\r",
+									"  pm.collectionVariables.set(\"pessoasid\", jsonData.id)"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"apelido\" : \"Apelido {{uniqueStr}}\",\n    \"nome\" : \"Nome {{uniqueStr}}\",\n    \"nascimento\" : \"{{birthdate}}\",\n    \"stack\" : {{languageChoose}}\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pessoas",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pessoas"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"apelido\": \"<string>\",\n  \"nome\": \"<string>\",\n  \"nascimento\": \"<dateTime>\",\n  \"stack\": [\n    \"<string>\",\n    \"<string>\"\n  ]\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/pessoas",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pessoas"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "/pessoas",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{baseUrl}}/pessoas?t=c#",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"pessoas"
+							],
+							"query": [
+								{
+									"key": "t",
+									"value": "c",
+									"description": "(Required) "
+								}
+							],
+							"hash": ""
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/pessoas?t=<string>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"pessoas"
+									],
+									"query": [
+										{
+											"key": "t",
+											"value": "<string>",
+											"description": "(Required) "
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "contagem-pessoas",
+			"item": [
+				{
+					"name": "/contagem-pessoas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/contagem-pessoas",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"contagem-pessoas"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/contagem-pessoas",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"contagem-pessoas"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"var uuid = require('uuid');",
+					"var moment = require('moment');",
+					"",
+					"let languages = [",
+					"     [\"Java\", \"PHP\", \"Go\"], ",
+					"     [\"CSharp\", \"Elixir\", \"Javascript\"], ",
+					"     [\"Dart\", \"Ruby\", \"Elixir\"], ",
+					"     [\"Ruby\", \"PHP\" ], ",
+					"     [\"CSharp\" ], ",
+					"     [\"Java\"], ",
+					"     [\"PHP\", \"Delphi\" ], ",
+					"     [\"Rush\", \"C\", \"C++\" ], ",
+					"     [\"Python\", \"Java\", \"C++\" ], ",
+					"     [\"Python\", \"CSharp\", \"Elixir\" ], ",
+					"]",
+					"",
+					"let selectLanguageGroup = languages[Math.floor(Math.random() * 9)];",
+					"let selectLanguage = selectLanguageGroup[Math.floor(Math.random() * selectLanguageGroup.length)];",
+					"",
+					"pm.collectionVariables.set(\"uniqueStr\", uuid.v4().substring(0, 4));",
+					"pm.collectionVariables.set(\"languageChoose\", JSON.stringify(selectLanguageGroup));",
+					"pm.collectionVariables.set(\"birthdate\", moment().subtract(Math.floor(Math.random() * 21),'years').format('YYYY-MM-DD'))",
+					"pm.collectionVariables.set(\"searchLanguage\", selectLanguage);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "/"
+		},
+		{
+			"key": "pessoasid",
+			"value": ""
+		},
+		{
+			"key": "uniqueStr",
+			"value": ""
+		},
+		{
+			"key": "languageChoose",
+			"value": ""
+		},
+		{
+			"key": "birthdate",
+			"value": ""
+		},
+		{
+			"key": "searchLanguage",
+			"value": ""
+		}
+	]
+}
