@@ -47,14 +47,23 @@ The benchmark is running using the Test project. The process will execute firstl
   - Open a `terminal` / `bash` and execute `dotnet test RinhaBackEnd.sln --filter 'Integration!=ignore'`
   - After execution, you will be able to see the table of benchmark results.
 
-### Running on Visual Studio
+#### Running on Visual Studio
 
 The project originally was created using Visual Studio 2022 Community Edition, but you can download its [most recent version](https://visualstudio.microsoft.com/vs/community/) and you need to download the [Visual Studio Container tools](https://learn.microsoft.com/en-us/visualstudio/containers/overview?view=vs-2022) for executing the project.
 
-### xUnit and integration tests
+#### xUnit and integration tests
 
 In spite of we are using **Posgresql** as a "Production database", the integration tests of this project run over the **SQLite**.
 
+#### Stress Test with the Postman
+
+After you execute the application using `Docker-compose up` or run it using Visual Studio. You will be able to execute the stress tests for this API using Postman.
+
+1. Download [Postman](https://www.postman.com/downloads/) and install it.
+2. Go to import collection and select the file `./test/stress/RinhaBackEnd.postman_collection.json`
+3. After importing the collection to the postman, right-click on the "RinhaBackEnd" collection, and select `Run Collection`, the `Runner Window` will be shown.
+4. Left side of the Runner window, select `performance`, and use the configuration you want.
+5. Click on run.
 
 
 <!--Add-Migration Initial -context PeopleDbContext -project RinhaBackEnd -StartupProject RinhaBackEnd  -Args "-- --provider Sqlite"-->
