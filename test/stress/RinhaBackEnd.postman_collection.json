@@ -364,7 +364,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "/"
+			"value": "http://localhost:9999"
 		},
 		{
 			"key": "pessoasid",
