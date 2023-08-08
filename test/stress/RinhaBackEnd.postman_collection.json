@@ -223,7 +223,7 @@
 							"raw": ""
 						},
 						"url": {
-							"raw": "{{baseUrl}}/pessoas?t=c#",
+							"raw": "{{baseUrl}}/pessoas?t={{searchLanguage}}",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -233,11 +233,10 @@
 							"query": [
 								{
 									"key": "t",
-									"value": "c",
+									"value": "{{searchLanguage}}",
 									"description": "(Required) "
 								}
-							],
-							"hash": ""
+							]
 						}
 					},
 					"response": [

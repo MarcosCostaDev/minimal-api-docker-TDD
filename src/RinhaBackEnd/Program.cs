@@ -1,14 +1,9 @@
-using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpLogging;
 using RinhaBackEnd.CustomConfig;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.Infra.Contexts;
-using System.IO;
-using static System.Net.Mime.MediaTypeNames;
 
 var builder = WebApplication.CreateBuilder(args);
 
