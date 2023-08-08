@@ -52,16 +52,17 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
     contract.AddNotifications(person);
 
-    foreach (var stackName in request.Stack)
-    {
-        var stack = new Stack(stackName);
+    if (request.Stack != null)
+        foreach (var stackName in request.Stack)
+        {
+            var stack = new Stack(stackName);
 
-        var personStack = new PersonStack(person, stack);
+            var personStack = new PersonStack(person, stack);
 
-        dbContext.PersonStacks.Add(personStack);
+            dbContext.PersonStacks.Add(personStack);
 
-        contract.AddNotifications(personStack);
-    }
+            contract.AddNotifications(personStack);
+        }
 
     if (!contract.IsValid) return Results.UnprocessableEntity(request);
     PersonResponse result;
@@ -123,7 +124,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseDeveloperExceptionPage();
 
-app.Use(next => context => {
+app.Use(next => context =>
+{
     context.Request.EnableBuffering();
     return next(context);
 });
@@ -143,7 +145,7 @@ using (IServiceScope scope = app.Services.CreateScope())
     {
         scope.ServiceProvider.GetService<PeopleDbContext>().Database.Migrate();
     }
-    catch(Exception ex)
+    catch (Exception ex)
     {
     }
 
