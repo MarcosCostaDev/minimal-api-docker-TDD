@@ -2,13 +2,13 @@ name: Publish Docker image
 
 on:
   push:
-    branches: ["release"]
+    branches: ["release", "fix/docker-deploy"]
 
 jobs:
   build-and-push:
     defaults:
       run:
-        working-directory: ./src/RinhaBackEnd
+        working-directory: ./src
     name: Build and push Docker image to Docker Hub
     runs-on: ubuntu-latest
     env:
