@@ -8,8 +8,11 @@ public class MapProfile : Profile
     public MapProfile()
     {
         CreateMap<Person, PersonResponse>()
-            .ForMember(p => p.Stack, opts => opts.MapFrom(p => p.PersonStacks.Select(ps => ps.Stack.Nome)));
+            .ForMember(p => p.Stack, opts => opts.MapFrom(p => p.PersonStacks.Select(ps => ps.Stack.Nome)))
+            .ReverseMap();
         CreateMap<Stack, string>()
             .ConvertUsing(p => p.Nome);
+
+          
     }
 }

@@ -3,6 +3,7 @@ using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
+using RinhaBackEnd.HostedServices;
 using RinhaBackEnd.Infra.Contexts;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,16 +18,13 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
-    options.InstanceName = "RinhaBackend";
-
-});
+builder.Services.AddSingleton<IConnectionMultiplexer>(options => ConnectionMultiplexer.Connect(options.GetRequiredService<IConfiguration>()!.GetConnectionString("RedisConnection")));
 
 builder.Services.AddCustomAutoMapper();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddHostedService<QueueConsumerHostedService>();
 
 var app = builder.Build();
 
@@ -37,15 +35,15 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IConnectionMultiplexer redis) =>
 {
     var contract = new Contract<Notification>();
 
     var person = new Person(request.Apelido, request.Nome, request.Nascimento);
 
-    dbContext.People.Add(person);
-
     contract.AddNotifications(person);
+
+    var result = mapper.Map<PersonResponse>(person);
 
     if (request.Stack != null)
         foreach (var stackName in request.Stack)
@@ -54,18 +52,19 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
             var personStack = new PersonStack(person, stack);
 
-            dbContext.PersonStacks.Add(personStack);
-
             contract.AddNotifications(personStack);
+
+            result.Stack.Add(stackName);
         }
 
     if (!contract.IsValid) return Results.UnprocessableEntity(request);
-    PersonResponse result;
+
     try
     {
-        await dbContext.SaveChangesAsync();
-        result = mapper.Map<PersonResponse>(person);
-        cache.SetString(person.Id.ToString(), result.ToJson());
+        var db = redis.GetDatabase();
+        var sub = redis.GetSubscriber();
+        db.StringSet($"{person.Id}", result.ToJson());
+        await sub.PublishAsync("peopleInserted", person.Id.ToString());
     }
     catch (Exception)
     {
@@ -74,9 +73,9 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IConnectionMultiplexer redis) =>
 {
-    var result = await cache.GetOrCreateStringAsync(id.ToString(), () =>
+    var result = await redis.GetOrCreateStringAsync(id.ToString(), () =>
     {
         return dbContext.People
                         .Include(p => p.PersonStacks)

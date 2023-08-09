@@ -2,34 +2,13 @@
 
 public static class CacheExtensions
 {
-    public static async Task<T> GetOrCreateAsync<T>(this IDistributedCache cache, string key, Func<T> action, DistributedCacheEntryOptions options = null!) where T : class
+    public static async Task<string> GetOrCreateStringAsync<T>(this IConnectionMultiplexer redis, string key, Func<T> action, TimeSpan? timeSpan = null) where T : class
     {
-        var retriveCache = cache.Get(key);
-
-        if (retriveCache != null) return Encoding.UTF8.GetString(retriveCache).DeserializeTo<T>();
-
-        options ??= new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromSeconds(30) };
-
-        dynamic execute = action.Invoke();
-
-        T result = execute is Task ? await execute : execute;
-
-        if (result == null) return null!;
-
-        var json = result.ToJson();
-
-        cache.Set(key, Encoding.UTF8.GetBytes(json), options);
-
-        return result;
-    }
-
-    public static async Task<string> GetOrCreateStringAsync<T>(this IDistributedCache cache, string key, Func<T> action, DistributedCacheEntryOptions options = null!) where T : class
-    {
-        var retriveCache = cache.GetString(key);
+        var db = redis.GetDatabase();
+        var retriveCache = db.StringGet(key);
 
         if (!string.IsNullOrEmpty(retriveCache)) return retriveCache;
 
-        options ??= new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromSeconds(30) };
 
         dynamic execute = action.Invoke();
 
@@ -39,7 +18,7 @@ public static class CacheExtensions
 
         var json = result.ToJson();
 
-        cache.Set(key, Encoding.UTF8.GetBytes(json), options);
+        db.StringSet(key, Encoding.UTF8.GetBytes(json), expiry: timeSpan ?? TimeSpan.FromMinutes(3));
 
         return json;
     }
