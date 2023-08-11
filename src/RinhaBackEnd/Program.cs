@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Distributed;
 using RinhaBackEnd.CustomConfig;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
@@ -37,13 +38,13 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache, CancellationToken token) =>
 {
     var contract = new Contract<Notification>();
 
     var person = new Person(request.Apelido, request.Nome, request.Nascimento);
 
-    dbContext.People.Add(person);
+    await dbContext.People.AddAsync(person, token);
 
     contract.AddNotifications(person);
 
@@ -54,18 +55,24 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
             var personStack = new PersonStack(person, stack);
 
-            dbContext.PersonStacks.Add(personStack);
+            await dbContext.PersonStacks.AddAsync(personStack, token);
 
             contract.AddNotifications(personStack);
         }
 
     if (!contract.IsValid) return Results.UnprocessableEntity(request);
+
+    var existApelido = await cache.GetAsync($"personApelido:{person.Apelido}", token);
+
+    if (existApelido != null) Results.UnprocessableEntity(request);
+
     PersonResponse result;
     try
     {
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(token);
         result = mapper.Map<PersonResponse>(person);
-        cache.SetString(person.Id.ToString(), result.ToJson());
+        await cache.SetStringAsync($"personApelido:{person.Apelido}", ".", token);
+        await cache.SetStringAsync(person.Id.ToString(), result.ToJson(), token);
     }
     catch (Exception)
     {
