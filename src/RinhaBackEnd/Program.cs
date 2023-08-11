@@ -22,7 +22,6 @@ builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
     options.InstanceName = "RinhaBackend";
-
 });
 
 builder.Services.AddCustomAutoMapper();
@@ -38,13 +37,13 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache, CancellationToken token) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache, CancellationToken cancelationToken) =>
 {
     var contract = new Contract<Notification>();
 
     var person = new Person(request.Apelido, request.Nome, request.Nascimento);
 
-    await dbContext.People.AddAsync(person, token);
+    await dbContext.People.AddAsync(person, cancelationToken);
 
     contract.AddNotifications(person);
 
@@ -55,24 +54,24 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
 
             var personStack = new PersonStack(person, stack);
 
-            await dbContext.PersonStacks.AddAsync(personStack, token);
+            await dbContext.PersonStacks.AddAsync(personStack, cancelationToken);
 
             contract.AddNotifications(personStack);
         }
 
     if (!contract.IsValid) return Results.UnprocessableEntity(request);
 
-    var existApelido = await cache.GetAsync($"personApelido:{person.Apelido}", token);
+    var existApelido = await cache.GetAsync($"personApelido:{person.Apelido}", cancelationToken);
 
     if (existApelido != null) Results.UnprocessableEntity(request);
 
     PersonResponse result;
     try
     {
-        await dbContext.SaveChangesAsync(token);
+        await dbContext.SaveChangesAsync(cancelationToken);
         result = mapper.Map<PersonResponse>(person);
-        await cache.SetStringAsync($"personApelido:{person.Apelido}", ".", token);
-        await cache.SetStringAsync(person.Id.ToString(), result.ToJson(), token);
+        await cache.SetStringAsync($"personApelido:{person.Apelido}", ".", cancelationToken);
+        await cache.SetStringAsync(person.Id.ToString(), result.ToJson(), cancelationToken);
     }
     catch (Exception)
     {
@@ -81,7 +80,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache) =>
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache, CancellationToken cancelationToken) =>
 {
     var result = await cache.GetOrCreateStringAsync(id.ToString(), () =>
     {
@@ -91,13 +90,13 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, People
                         .Where(p => p.Id == id)
                         .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
                         .AsNoTracking()
-                        .FirstOrDefaultAsync();
-    });
+                        .FirstOrDefaultAsync(cancelationToken);
+    }, cancellationToken: cancelationToken);
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
 });
 
-app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbContext dbContext, IMapper mapper) =>
+app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbContext dbContext, IMapper mapper, CancellationToken token) =>
 {
     var query = PredicateBuilder.New<Person>();
     query = query.Or(p => EF.Functions.Like(p.Nome, $"%{search}%"));
@@ -109,13 +108,13 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbCon
                                 .Where(query)
                                 .AsNoTracking()
                                 .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
-                                .ToListAsync();
+                                .ToListAsync(token);
     return Results.Ok(result);
 });
 
-app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext) =>
+app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext, CancellationToken token) =>
 {
-    return Results.Ok(await dbContext.People.AsNoTracking().CountAsync());
+    return Results.Ok(await dbContext.People.AsNoTracking().CountAsync(token));
 });
 
 if (app.Environment.IsDevelopment())
