@@ -1,4 +1,5 @@
-﻿using RinhaBackEnd.Dtos.Response;
+﻿using RinhaBackEnd.Domain;
+using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 
 namespace RinhaBackEnd.HostedServices;
@@ -16,8 +17,8 @@ public class QueueConsumerHostedService : BackgroundService
     {
 
         var id = string.Empty;
-        string consumerId = null!; 
-
+        string consumerId = null!;
+        var consumerCreated = false;
         while (!stoppingToken.IsCancellationRequested)
         {
             using var scope = _serviceProvider.CreateScope();
@@ -26,15 +27,16 @@ public class QueueConsumerHostedService : BackgroundService
                 using var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>();
                 var db = redis.GetDatabase();
 
+                if (!consumerCreated && !(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
+                {
+                    await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
+                    consumerCreated = true;
+                }
+
                 if (!string.IsNullOrEmpty(id))
                 {
                     await db.StreamAcknowledgeAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, id);
                     id = string.Empty;
-                }
-
-                if (!(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
-                {
-                    await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
                 }
 
                 consumerId ??= Guid.NewGuid().ToString()[..5];
@@ -44,7 +46,7 @@ public class QueueConsumerHostedService : BackgroundService
 
                 id = streamResult.First().Id;
 
-                var json = await db.StringGetAsync(streamResult.First()[EnvConsts.StreamPersonKey].ToString());
+                var json = await db.StringGetAsync($"personId:{streamResult.First()[EnvConsts.StreamPersonKey]}");
                 var response = json.ToString().DeserializeTo<PersonResponse>();
 
                 using var connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
