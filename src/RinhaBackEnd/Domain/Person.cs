@@ -13,7 +13,6 @@ public class Person
         Nome = nome;
         Nascimento = nascimento;
         Stack = stacks;
-
     }
 
     public Guid Id { get; private set; }
