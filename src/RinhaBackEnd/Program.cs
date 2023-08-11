@@ -7,14 +7,14 @@ using RinhaBackEnd.HostedServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Singleton);
+builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(options => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")));
+builder.Services.AddScoped<IConnectionMultiplexer>(options => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")));
 
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
@@ -63,7 +63,6 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
 {
     var result = await redis.GetOrCreateStringAsync(id.ToString(), async () =>
     {
-
         var result = connection.QueryFirstOrDefault<Person>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
@@ -72,6 +71,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
                                                                     ID = @ID", new { id }, commandType: System.Data.CommandType.Text);
 
         return result.ToPersonResponse();
+
     });
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
@@ -95,13 +95,10 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, NpgsqlConne
     var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
     return Results.Ok(result);
 
-
 });
 
 app.MapGet("/contagem-pessoas", async (NpgsqlConnection connection) =>
 {
-    await connection.OpenAsync();
-
     return Results.Ok(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PEOPLE"));
 });
 

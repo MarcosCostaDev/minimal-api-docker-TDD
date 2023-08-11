@@ -13,5 +13,5 @@ public class PersonResponse
     public string Stack { get; set; }
 
     [JsonPropertyName("stack")]
-    public IEnumerable<string>? Stacks { get { return !string.IsNullOrEmpty(Stack) ? Stack.DeserializeTo<IEnumerable<string>>() : Enumerable.Empty<string>();  } set { ; } }
+    public IEnumerable<string>? Stacks { get { return !string.IsNullOrEmpty(Stack) ? Stack.DeserializeTo<IEnumerable<string>>() : Enumerable.Empty<string>();  } set { Stack = value?.ToJson(); } }
 }
