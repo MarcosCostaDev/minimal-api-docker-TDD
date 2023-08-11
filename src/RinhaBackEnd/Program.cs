@@ -67,14 +67,14 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
 
     var resultFunc = () =>
     {
-        var result = connection.QueryFirstOrDefault<Person>(@"SELECT
+        var result = connection.QueryFirstOrDefault<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
                                                                     PEOPLE 
                                                                 WHERE 
                                                                     ID = @ID", new { id }, commandType: System.Data.CommandType.Text);
 
-        return result?.ToPersonResponse();
+        return result;
     };
     var result = await db.StringGetAsync($"personId:{id}");
     if (!result.HasValue)

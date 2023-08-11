@@ -17,7 +17,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.45GB'
+          memory: '0.5GB'
   api02:
     container_name: api02
     image: rinhabackend
@@ -34,7 +34,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.45GB'
+          memory: '0.5GB'
   db:
     container_name: database
     image: 'postgres:latest'
@@ -42,7 +42,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: '1.7GB'
+          memory: '1GB'
     ports:
        - 5432:5432
     environment:
@@ -60,7 +60,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.3GB'
+          memory: '0.7GB'
   proxy:
     container_name: proxy
     image: nginx:latest
@@ -75,4 +75,4 @@ services:
       resources:
         limits:
           cpus: '0.1'
-          memory: '0.1GB'
+          memory: '0.3GB'
