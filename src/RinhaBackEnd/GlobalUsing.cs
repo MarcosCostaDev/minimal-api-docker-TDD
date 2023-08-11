@@ -1,13 +1,10 @@
-﻿global using AutoMapper;
-global using AutoMapper.QueryableExtensions;
+﻿global using Dapper;
 global using Flunt.Notifications;
 global using Flunt.Validations;
-global using LinqKit;
 global using Microsoft.AspNetCore.HttpOverrides;
 global using Microsoft.AspNetCore.Mvc;
-global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Configuration;
+global using Npgsql;
 global using StackExchange.Redis;
-global using System.Diagnostics.CodeAnalysis;
 global using System.Text;
 global using System.Text.Json;

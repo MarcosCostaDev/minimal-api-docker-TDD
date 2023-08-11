@@ -49,6 +49,8 @@ services:
        POSTGRES_USER: rinha
        POSTGRES_PASSWORD: 7653e869faa3 
        POSTGRES_DB: rinhadb
+    volumes:
+      - ./create-script.sql:/docker-entrypoint-initdb.d/create-script.sql
   redis:
     image: redis
     container_name: cache

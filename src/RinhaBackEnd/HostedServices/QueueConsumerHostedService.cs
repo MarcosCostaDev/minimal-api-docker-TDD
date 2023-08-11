@@ -1,61 +1,62 @@
-﻿using RinhaBackEnd.Domain;
+﻿using Microsoft.Extensions.Hosting;
+using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
-using RinhaBackEnd.Infra.Contexts;
-using System.Diagnostics;
-using System;
+using System.Threading;
 
 namespace RinhaBackEnd.HostedServices;
 
-public class QueueConsumerHostedService : IHostedService
+public class QueueConsumerHostedService : BackgroundService
 {
 
     private readonly IConnectionMultiplexer _redis;
-    private readonly IMapper _mapper;
-    private readonly DbContextOptionsBuilder<PeopleDbContext> _buildOptions;
+    private readonly ILogger<QueueConsumerHostedService> _logger;
+    private readonly NpgsqlConnection _connection;
 
-    public QueueConsumerHostedService(IConnectionMultiplexer connectionMultiplexer, IConfiguration configuration, IMapper mapper)
+    public QueueConsumerHostedService(IConnectionMultiplexer connectionMultiplexer, NpgsqlConnection connection)
     {
-        var buildOptions = new DbContextOptionsBuilder<PeopleDbContext>();
-
-        _buildOptions = buildOptions.UseNpgsql(configuration.GetConnectionString("PeopleDbConnection"));
-
+        _connection = connection;
         _redis = connectionMultiplexer;
-        _mapper = mapper;
     }
 
-
-    public Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var sub = _redis.GetSubscriber();
+        
+        var id = string.Empty;
+        var consumerId = Guid.NewGuid().ToString()[..5];
 
-        sub.Subscribe("peopleInserted").OnMessage(async channelMessage =>
+        while (!stoppingToken.IsCancellationRequested)
         {
-            using var dbContext = new PeopleDbContext(_buildOptions.Options);
-            var db = _redis.GetDatabase();
-            channelMessage.Message.ToString();
-            var json = await db.StringGetAsync(channelMessage.Message.ToString());
-            var response = json.ToString().DeserializeTo<PersonResponse>();
-            var person = _mapper.Map<Person>(response);
+            try
+            {
+                var db = _redis.GetDatabase();
 
-            if (response.Stack != null)
-                foreach (var stackName in response.Stack)
+                if (!string.IsNullOrEmpty(id))
                 {
-                    var stack = new Stack(stackName);
-
-                    var personStack = new PersonStack(person, stack);
-
-                    dbContext.PersonStacks.Add(personStack);
+                    await db.StreamAcknowledgeAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, id);
+                    id = string.Empty;
                 }
-            dbContext.Add(person);
 
-            dbContext.SaveChanges();
-        });
-        return Task.CompletedTask;
-    }
+                if (!(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
+                {
+                    await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
+                }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
+                var streamResult = await db.StreamReadGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, consumerId);
+
+                if (!streamResult.Any()) continue;
+
+                id = streamResult.First().Id;
+
+                var json = await db.StringGetAsync(streamResult.First()[EnvConsts.StreamPersonKey].ToString());
+                var response = json.ToString().DeserializeTo<PersonResponse>();
+
+                await _connection.ExecuteAsync("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES (@ID, @APELIDO, @NOME, @NASCIMENTO, @STACKS::jsonb)", response, commandType: System.Data.CommandType.Text);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Error on redis stream");
+            }
+        }
     }
 }
