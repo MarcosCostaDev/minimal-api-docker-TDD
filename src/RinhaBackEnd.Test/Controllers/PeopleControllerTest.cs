@@ -1,21 +1,27 @@
 ﻿using RinhaBackEnd.Test.Interfaces;
+using System.Runtime.InteropServices;
 
 namespace RinhaBackEnd.Test.Controllers;
 
 [Trait("Integration", "Api")]
-[Collection("API")]
-public class PeopleControllerTest : IDisposable
+[Collection("docker")]
+public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 {
     protected IIntegrationTest _fixture { get; set; }
     protected ITestOutputHelper _output { get; set; }
 
-    protected PeopleControllerTest()
-    {
-    }
-    public PeopleControllerTest(ProgramFixture fixture, ITestOutputHelper output)
+    public PeopleControllerTest(ContainerFixture fixture, DockerFixture dockerFixture, ITestOutputHelper output)
     {
         _fixture = fixture;
         _output = output;
+        _ = fixture.DownDockerCompose();
+
+        dockerFixture.InitOnce(() => new DockerFixtureOptions
+        {
+            DockerComposeFiles = new[] { "docker-compose.yml", "docker-compose.testing.yml" },
+            CustomUpTest = output => output.Any(l => l.Contains("ready for start up") || l.Contains("Attaching to api01, api02, cache, database, proxy")),
+            StartupTimeoutSecs = 240
+        });
     }
 
     [Benchmark(Description = nameof(HealthShouldBeSuccess))]
@@ -53,8 +59,8 @@ public class PeopleControllerTest : IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Nascimento.Date.Should().Be(request.Nascimento?.Date);
+        sut.Stacks.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(CreateRepeatedPersonShouldFail422))]
@@ -81,8 +87,8 @@ public class PeopleControllerTest : IDisposable
         response2.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Nascimento.Date.Should().Be(request.Nascimento?.Date);
+        sut.Stacks.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(CreatePersonShouldFailStatus422))]
@@ -106,7 +112,7 @@ public class PeopleControllerTest : IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
+        sut.Nascimento?.Date.Should().Be(request.Nascimento?.Date);
         sut.Stack.Should().Contain(request.Stack);
     }
 
@@ -135,8 +141,8 @@ public class PeopleControllerTest : IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Nascimento.Date.Should().Be(request.Nascimento?.Date);
+        sut.Stacks.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(GetPersonShouldBeFail404))]

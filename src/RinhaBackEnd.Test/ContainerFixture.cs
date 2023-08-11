@@ -1,4 +1,5 @@
 ﻿using RinhaBackEnd.Test.Interfaces;
+using System.Runtime.InteropServices;
 
 namespace RinhaBackEnd.Test;
 
@@ -41,21 +42,24 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         if (disposing)
         {
             Client.Dispose();
+            _ = DownDockerCompose();
         }
     }
 
     public async Task ClearDatabaseAsync()
     {
-        var buildOptions = new DbContextOptionsBuilder<PeopleDbContext>();
+        var connection = new NpgsqlConnection(Configuration.GetConnectionString("PeopleDbConnection"));
 
-        buildOptions.UseNpgsql(Configuration.GetConnectionString("PeopleDbConnection"));
+        await connection.ExecuteAsync("truncate table people;");
+    }
 
-        using var appDbContext = new PeopleDbContext(buildOptions.Options);
+    public async Task DownDockerCompose()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            System.Diagnostics.Process.Start("CMD.exe", "docker-compose rm -f | docker-compose down");
+        else
+            System.Diagnostics.Process.Start("bash", "docker-compose rm -f | docker-compose down");
 
-        var people = await appDbContext.People.ToListAsync();
-
-        appDbContext.People.RemoveRange(people);
-
-        await appDbContext.SaveChangesAsync();
+        Thread.Sleep(3_000);
     }
 }

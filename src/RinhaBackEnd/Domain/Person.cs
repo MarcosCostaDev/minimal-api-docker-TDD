@@ -28,13 +28,12 @@ public class Person
 
     public bool IsValid()
     {
-        if (string.IsNullOrEmpty(Apelido)) return false;
-        if (Apelido.Length > 32) return false;
-        if (string.IsNullOrEmpty(Nome)) return false;
-        if (Nome.Length > 32) return false;
-        if (!Nascimento.HasValue) return false;
-        if (Stack.Any(p => string.IsNullOrEmpty(p))) return false;
-        return true;
+        return !(string.IsNullOrEmpty(Apelido)
+                || Apelido.Length > 32
+                || string.IsNullOrEmpty(Nome)
+                || Nome.Length > 32
+                || !Nascimento.HasValue
+                || Stack.Any(p => string.IsNullOrEmpty(p) || p.Length > 32));
     }
 
     public PersonResponse ToPersonResponse()
