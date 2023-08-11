@@ -29,13 +29,10 @@ app.MapGet("/ping", () => "pong");
 
 app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnection connection, IConnectionMultiplexer redis) =>
 {
-    var contract = new Contract<Notification>();
 
     var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
 
-    contract.AddNotifications(person);
-
-    if (!contract.IsValid) return Results.UnprocessableEntity(request);
+    if (!person.IsValid()) return Results.UnprocessableEntity(request);
 
     var result = person.ToPersonResponse();
     try
@@ -77,7 +74,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
 });
 
-app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, NpgsqlConnection connection) =>
+app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, NpgsqlConnection connection) =>
 {
     if (string.IsNullOrEmpty(search)) return Results.BadRequest();
 

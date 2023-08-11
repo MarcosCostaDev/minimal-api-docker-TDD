@@ -16,7 +16,7 @@ public class QueueConsumerHostedService : BackgroundService
     {
 
         var id = string.Empty;
-        var consumerId = Guid.NewGuid().ToString()[..5];
+        string consumerId = null!; 
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -37,6 +37,7 @@ public class QueueConsumerHostedService : BackgroundService
                     await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
                 }
 
+                consumerId ??= Guid.NewGuid().ToString()[..5];
                 var streamResult = await db.StreamReadGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, consumerId);
 
                 if (!streamResult.Any()) continue;

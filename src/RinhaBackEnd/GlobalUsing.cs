@@ -1,6 +1,4 @@
 ﻿global using Dapper;
-global using Flunt.Notifications;
-global using Flunt.Validations;
 global using Microsoft.AspNetCore.HttpOverrides;
 global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.Extensions.Configuration;

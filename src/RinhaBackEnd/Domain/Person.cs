@@ -3,7 +3,7 @@ using RinhaBackEnd.Extensions;
 
 namespace RinhaBackEnd.Domain;
 
-public class Person : Notifiable<Notification>
+public class Person 
 {
     protected Person() { }
     public Person(string apelido, string nome, DateTime nascimento, IEnumerable<string>? stacks)
@@ -12,25 +12,8 @@ public class Person : Notifiable<Notification>
         Apelido = apelido;
         Nome = nome;
         Nascimento = nascimento;
+        Stack = stacks;
 
-        var contract = new Contract<Notification>();
-        contract.IsNotNullOrEmpty(Apelido, nameof(Apelido))
-                .IsLowerOrEqualsThan(Apelido, 32, nameof(Apelido))
-                .IsNotNullOrEmpty(Nome, nameof(Nome))
-                .IsLowerOrEqualsThan(Nome, 100, nameof(Nome))
-                .IsBetween(Nascimento, new DateTime(1900, 01, 01), DateTime.Now.Date, nameof(Nascimento));
-
-        if (stacks != null)
-        {
-            foreach (var stack in stacks)
-            {
-                contract.IsNotNullOrEmpty(stack, nameof(stack));
-            }
-
-            Stack = stacks;
-        }
-
-        AddNotifications(contract);
     }
 
     public Guid Id { get; private set; }
@@ -44,6 +27,17 @@ public class Person : Notifiable<Notification>
     }
     public IEnumerable<string> Stack { get; set; }
 
+    public bool IsValid()
+    {
+        if (string.IsNullOrEmpty(Apelido)) return false;
+        if (Apelido.Length > 32) return false;
+        if (string.IsNullOrEmpty(Nome)) return false;
+        if (Nome.Length > 32) return false;
+        if (Nascimento.Date > new DateTime(1900, 01, 01) && Nascimento.Date <= DateTime.Now.Date) return false;
+        if (Stack.Any(p => string.IsNullOrEmpty(p))) return false;
+        return true;
+    }
+
     public PersonResponse ToPersonResponse()
     {
         return new PersonResponse
@@ -54,6 +48,5 @@ public class Person : Notifiable<Notification>
             Stacks = Stack,
             Nascimento = Nascimento
         };
-
     } 
 }
