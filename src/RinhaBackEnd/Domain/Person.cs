@@ -3,19 +3,20 @@
 public class Person : Notifiable<Notification>
 {
     protected Person() { }
-    public Person(string apelido, string nome, DateTime nascimento)
+    public Person(string apelido, string nome, DateTime? nascimento)
     {
         Id = Guid.NewGuid();
         Apelido = apelido;
         Nome = nome;
-        Nascimento = nascimento;
+        Nascimento = nascimento.GetValueOrDefault();
 
         var contract = new Contract<Notification>();
         contract.IsNotNullOrEmpty(Apelido, nameof(Apelido))
                 .IsLowerOrEqualsThan(Apelido, 32, nameof(Apelido))
                 .IsNotNullOrEmpty(Nome, nameof(Nome))
                 .IsLowerOrEqualsThan(Nome, 100, nameof(Nome))
-                .IsBetween(Nascimento, new DateTime(1900, 01, 01), DateTime.Now.Date, nameof(Nascimento));
+                .IsTrue(nascimento.HasValue, nameof(Nascimento));
+
         AddNotifications(contract);
     }
 
