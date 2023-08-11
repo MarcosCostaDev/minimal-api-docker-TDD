@@ -56,9 +56,9 @@ public class ContainerFixture : IIntegrationTest, IDisposable
     public async Task DownDockerCompose()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            System.Diagnostics.Process.Start("CMD.exe", "docker-compose rm -f | docker-compose down");
+            System.Diagnostics.Process.Start("CMD.exe", "docker-compose rm -f & docker-compose down");
         else
-            System.Diagnostics.Process.Start("bash", "docker-compose rm -f | docker-compose down");
+            System.Diagnostics.Process.Start("bash", "docker-compose rm -f & docker-compose down");
 
         Thread.Sleep(3_000);
     }
