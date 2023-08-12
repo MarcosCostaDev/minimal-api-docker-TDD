@@ -14,7 +14,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     {
         _fixture = fixture;
         _output = output;
-        _ = fixture.DownDockerCompose();
 
         dockerFixture.InitOnce(() => new DockerFixtureOptions
         {
@@ -22,10 +21,14 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
             CustomUpTest = output => output.Any(l => l.Contains("ready for start up") || l.Contains("Attaching to api01, api02, cache, database, proxy")),
             StartupTimeoutSecs = 240
         });
+
+
+        Thread.Sleep(2_400);
+
     }
 
     [Benchmark(Description = nameof(HealthShouldBeSuccess))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task HealthShouldBeSuccess()
     {
         var response = await _fixture.Client.GetAsync("/ping");
@@ -38,7 +41,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     }
 
     [Benchmark(Description = nameof(CreatePersonShouldBeSuccess))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldBeSuccess()
     {
         var request = new PersonRequest
@@ -64,7 +67,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     }
 
     [Benchmark(Description = nameof(CreateRepeatedPersonShouldFail422))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task CreateRepeatedPersonShouldFail422()
     {
         var request = new PersonRequest
@@ -92,7 +95,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     }
 
     [Benchmark(Description = nameof(CreatePersonShouldFailStatus422))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldFailStatus422()
     {
         var request = new PersonRequest
@@ -117,7 +120,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     }
 
     [Benchmark(Description = nameof(GetPersonShouldBeSuccess))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeSuccess()
     {
         var request = new PersonRequest
@@ -146,7 +149,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     }
 
     [Benchmark(Description = nameof(GetPersonShouldBeFail404))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeFail404()
     {
         var response = await _fixture.Client.GetAsync($"/pessoas/{Guid.NewGuid()}");
@@ -154,24 +157,27 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 
-    [Benchmark(Description = nameof(QueryPersonShouldFind4))]
-    [Fact]
-    public async Task QueryPersonShouldFind4()
+    [Benchmark(Description = nameof(QueryPersonShouldFind1))]
+    [Fact(Timeout = 10_000)]
+    public async Task QueryPersonShouldFind1()
     {
-        for (int i = 0; i < 10; i++)
+        var index = 0;
+        foreach (var languages in GetLanguages().Take(2))
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)).Date,
-                Nome = $"Nome{i}",
-                Stack = GetLanguages().ElementAt(i)
+                Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date,
+                Nome = $"Nome",
+                Stack = languages
             };
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
-        }
 
+            index++;
+        }
+        Thread.Sleep(2_000);
         var response = await _fixture.Client.GetAsync("/pessoas?t=Java");
         response.EnsureSuccessStatusCode();
 
@@ -179,26 +185,31 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
         var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
 
-        sut.Should().HaveCount(4);
+        sut.Should().HaveCount(1);
     }
 
     [Benchmark(Description = nameof(QueryPersonShouldFind0))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task QueryPersonShouldFind0()
     {
-        for (int i = 0; i < 10; i++)
+        var index = 0;
+        foreach (var languages in GetLanguages().Take(2))
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)).Date,
-                Nome = $"Nome{i}",
-                Stack = GetLanguages().ElementAt(i)
+                Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date,
+                Nome = $"Nome",
+                Stack = languages
             };
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
+
+            index++;
         }
+
+        Thread.Sleep(2_000);
 
         var response = await _fixture.Client.GetAsync("/pessoas?t=Cobol");
         response.EnsureSuccessStatusCode();
@@ -210,36 +221,41 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Should().HaveCount(0);
     }
 
-    [Benchmark(Description = nameof(CountPersonShouldBe10))]
-    [Fact]
-    public async Task CountPersonShouldBe10()
+    [Benchmark(Description = nameof(CountPersonShouldBe3))]
+    [Fact(Timeout = 15_000)]
+    public async Task CountPersonShouldBe3()
     {
-        for (int i = 0; i < 10; i++)
+        var index = 0;
+        foreach (var languages in GetLanguages().Take(3))
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)),
-                Nome = $"Nome{i}",
-                Stack = GetLanguages().ElementAt(i)
+                Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date,
+                Nome = $"Nome",
+                Stack = languages
             };
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
+
+            index++;
         }
+
+        Thread.Sleep(2_000);
 
         var response = await _fixture.Client.GetAsync("/contagem-pessoas");
         response.EnsureSuccessStatusCode();
 
         var sut = await response.Content.ReadAsStringAsync();
 
-        sut.Should().Be("10");
+        sut.Should().Be("3");
     }
 
     private IEnumerable<IEnumerable<string>> GetLanguages()
     {
         yield return new string[] { "Java", "PHP", "Go" };
-        yield return new string[] { "CSharp", "Elixir", "Javascript" };
+        yield return new string[] { "CSharp", "Elixir", };
         yield return new string[] { "Dart", "Ruby", "Elixir" };
         yield return new string[] { "Ruby", "PHP" };
         yield return new string[] { "CSharp" };

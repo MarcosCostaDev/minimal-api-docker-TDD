@@ -8,7 +8,7 @@ services:
       context: ../../../../
       dockerfile: RinhaBackEnd/Dockerfile
     environment:
-      - ASPNETCORE_ENVIRONMENT=Benchmark
+      - ASPNETCORE_ENVIRONMENT=Testing
     depends_on:
       - db
       - redis
@@ -27,7 +27,7 @@ services:
       context: ../../../../
       dockerfile: RinhaBackEnd/Dockerfile
     environment:
-      - ASPNETCORE_ENVIRONMENT=Benchmark
+      - ASPNETCORE_ENVIRONMENT=Testing
     depends_on:
       - db
       - redis

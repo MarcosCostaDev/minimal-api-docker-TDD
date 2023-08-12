@@ -15,9 +15,10 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         var builder = new ConfigurationBuilder()
                          .SetBasePath(Directory.GetCurrentDirectory())
                          .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                         .AddJsonFile("appsettings.Benchmark.json", optional: false, reloadOnChange: true);
+                         .AddJsonFile("appsettings.Testing.json", optional: false, reloadOnChange: true);
 
         Configuration = builder.Build();
+        _ = DownDockerComposeAsync();
     }
     private HttpClient _httpClient;
     public HttpClient Client
@@ -42,24 +43,30 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         if (disposing)
         {
             Client.Dispose();
-            _ = DownDockerCompose();
+            _ = DownDockerComposeAsync();
         }
     }
 
     public async Task ClearDatabaseAsync()
     {
-        var connection = new NpgsqlConnection(Configuration.GetConnectionString("PeopleDbConnection"));
+        using var connection = new NpgsqlConnection(Configuration.GetConnectionString("PeopleDbConnection"));
 
-        await connection.ExecuteAsync("truncate table people;");
+        await connection.ExecuteAsync(@"DO $$
+	                                        BEGIN
+		                                        IF (select Count(1) from information_schema.tables where table_name = 'people') >0 
+		                                        THEN truncate table people;
+		                                        END IF;
+	                                        END;
+	                                    $$");
     }
 
-    public async Task DownDockerCompose()
+    public async Task DownDockerComposeAsync()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             System.Diagnostics.Process.Start("CMD.exe", "docker-compose rm -f & docker-compose down");
         else
             System.Diagnostics.Process.Start("bash", "docker-compose rm -f & docker-compose down");
 
-        Thread.Sleep(3_000);
+        Thread.Sleep(5_000);
     }
 }

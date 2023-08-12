@@ -4,7 +4,6 @@ using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
-using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +29,6 @@ app.MapGet("/ping", () => "pong");
 
 app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnection connection, IConnectionMultiplexer redis) =>
 {
-
     var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
 
     if (!person.IsValid()) return Results.UnprocessableEntity(request);
@@ -61,13 +59,13 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnectio
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, NpgsqlConnection connection, IConnectionMultiplexer redis) =>
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, NpgsqlConnection connection, IConnectionMultiplexer redis, CancellationToken cancellationToken) =>
 {
     var db = redis.GetDatabase();
 
-    var resultFunc = () =>
+    var resultFunc = async () =>
     {
-        var result = connection.QueryFirstOrDefault<PersonResponse>(@"SELECT
+        var result = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
                                                                     PEOPLE 
@@ -79,8 +77,11 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
     var result = await db.StringGetAsync($"personId:{id}");
     if (!result.HasValue)
     {
-        result = resultFunc.Invoke()?.ToJson();
-        await db.StringGetSetAsync($"personId:{id}", result);
+        var queryResult = await resultFunc.Invoke();
+
+        if (queryResult == null) return Results.NotFound();
+
+        await db.StringGetSetAsync($"personId:{id}", queryResult.ToJson());
     }
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
