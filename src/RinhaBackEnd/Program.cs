@@ -14,7 +14,15 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
-builder.Services.AddScoped<IConnectionMultiplexer>(options => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")));
+builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
+{
+    return ConnectionMultiplexerPoolFactory.Create(
+                poolSize: 60,
+                configuration: builder.Configuration.GetConnectionString("RedisConnection"),
+                connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
+});
+
+
 
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
@@ -27,7 +35,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnection connection, IConnectionMultiplexer redis) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnection connection, IConnectionMultiplexerPool redis) =>
 {
     var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
 
@@ -36,7 +44,8 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnectio
     var result = person.ToPersonResponse();
     try
     {
-        var db = redis.GetDatabase();
+        var pool = await redis.GetAsync();
+        var db = pool.Connection.GetDatabase();
 
         var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
 
@@ -59,9 +68,10 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request, NpgsqlConnectio
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, NpgsqlConnection connection, IConnectionMultiplexer redis, CancellationToken cancellationToken) =>
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, NpgsqlConnection connection, IConnectionMultiplexerPool redis, CancellationToken cancellationToken) =>
 {
-    var db = redis.GetDatabase();
+    var pool = await redis.GetAsync();
+    var db = pool.Connection.GetDatabase();
 
     var resultFunc = async () =>
     {
