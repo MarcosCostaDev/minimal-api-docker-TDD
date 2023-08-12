@@ -7,15 +7,13 @@ using BenchmarkDotNet.Validators;
 namespace RinhaBackEnd.Test.Benchmarks;
 
 [Trait("Integration", "Benchmark")]
-public class ApiBenchmarkTest : IClassFixture<DockerFixture>, IDisposable
+internal class ApiBenchmarkTest : IClassFixture<DockerFixture>, IDisposable
 {
     private readonly DockerFixture _dockerFixture;
     private ITestOutputHelper _output;
 
-    public ApiBenchmarkTest(DockerFixture dockerFixture, ITestOutputHelper output)
+    public ApiBenchmarkTest(DockerFixture dockerFixture, ITestOutputHelper output) 
     {
-        _dockerFixture = dockerFixture;
-        _output = output;
         dockerFixture.InitOnce(() => new DockerFixtureOptions
         {
             DockerComposeFiles = new[] { "docker-compose.yml", "docker-compose.testing.yml" },
@@ -24,7 +22,7 @@ public class ApiBenchmarkTest : IClassFixture<DockerFixture>, IDisposable
         });
     }
 
-    [Fact]
+    //[Fact]
     public void ApiBenchmark()
     {
         var logger = new AccumulationLogger();

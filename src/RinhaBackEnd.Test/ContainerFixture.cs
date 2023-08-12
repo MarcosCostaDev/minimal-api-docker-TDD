@@ -1,4 +1,5 @@
 ﻿using RinhaBackEnd.Test.Interfaces;
+using System.Runtime.InteropServices;
 
 namespace RinhaBackEnd.Test;
 
@@ -14,9 +15,10 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         var builder = new ConfigurationBuilder()
                          .SetBasePath(Directory.GetCurrentDirectory())
                          .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                         .AddJsonFile("appsettings.Benchmark.json", optional: false, reloadOnChange: true);
+                         .AddJsonFile("appsettings.Testing.json", optional: false, reloadOnChange: true);
 
         Configuration = builder.Build();
+        _ = DownDockerComposeAsync();
     }
     private HttpClient _httpClient;
     public HttpClient Client
@@ -41,21 +43,30 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         if (disposing)
         {
             Client.Dispose();
+            _ = DownDockerComposeAsync();
         }
     }
 
     public async Task ClearDatabaseAsync()
     {
-        var buildOptions = new DbContextOptionsBuilder<PeopleDbContext>();
+        using var connection = new NpgsqlConnection(Configuration.GetConnectionString("PeopleDbConnection"));
 
-        buildOptions.UseNpgsql(Configuration.GetConnectionString("PeopleDbConnection"));
+        await connection.ExecuteAsync(@"DO $$
+	                                        BEGIN
+		                                        IF (select Count(1) from information_schema.tables where table_name = 'people') >0 
+		                                        THEN truncate table people;
+		                                        END IF;
+	                                        END;
+	                                    $$");
+    }
 
-        using var appDbContext = new PeopleDbContext(buildOptions.Options);
+    public async Task DownDockerComposeAsync()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            System.Diagnostics.Process.Start("CMD.exe", "docker-compose rm -f & docker-compose down");
+        else
+            System.Diagnostics.Process.Start("bash", "docker-compose rm -f & docker-compose down");
 
-        var people = await appDbContext.People.ToListAsync();
-
-        appDbContext.People.RemoveRange(people);
-
-        await appDbContext.SaveChangesAsync();
+        Thread.Sleep(5_000);
     }
 }

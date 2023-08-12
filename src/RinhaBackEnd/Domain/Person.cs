@@ -1,28 +1,50 @@
-﻿namespace RinhaBackEnd.Domain;
+﻿using RinhaBackEnd.Dtos.Response;
+using RinhaBackEnd.Extensions;
 
-public class Person : Notifiable<Notification>
+namespace RinhaBackEnd.Domain;
+
+public class Person 
 {
     protected Person() { }
-    public Person(string apelido, string nome, DateTime? nascimento)
+    public Person(string apelido, string nome, DateTime? nascimento, IEnumerable<string>? stacks)
     {
         Id = Guid.NewGuid();
         Apelido = apelido;
         Nome = nome;
-        Nascimento = nascimento.GetValueOrDefault();
-
-        var contract = new Contract<Notification>();
-        contract.IsNotNullOrEmpty(Apelido, nameof(Apelido))
-                .IsLowerOrEqualsThan(Apelido, 32, nameof(Apelido))
-                .IsNotNullOrEmpty(Nome, nameof(Nome))
-                .IsLowerOrEqualsThan(Nome, 100, nameof(Nome))
-                .IsTrue(nascimento.HasValue, nameof(Nascimento));
-
-        AddNotifications(contract);
+        Nascimento = nascimento;
+        Stack = stacks;
     }
 
     public Guid Id { get; private set; }
     public string Apelido { get; private set; }
     public string Nome { get; private set; }
-    public DateTime Nascimento { get; private set; }
-    public IReadOnlyCollection<PersonStack> PersonStacks { get; private set; }
+    public DateTime? Nascimento { get; private set; }
+    public string Stacks
+    {
+        get { return Stack.ToJson(); }
+        set { Stack = value.DeserializeTo<IEnumerable<string>>(); }
+    }
+    public IEnumerable<string> Stack { get; set; }
+
+    public bool IsValid()
+    {
+        return !(string.IsNullOrEmpty(Apelido)
+                || Apelido.Length > 32
+                || string.IsNullOrEmpty(Nome)
+                || Nome.Length > 32
+                || !Nascimento.HasValue
+                || Stack.Any(p => string.IsNullOrEmpty(p) || p.Length > 32));
+    }
+
+    public PersonResponse ToPersonResponse()
+    {
+        return new PersonResponse
+        {
+            Id = Id,
+            Apelido = Apelido,
+            Nome = Nome,
+            Stacks = Stack,
+            Nascimento = Nascimento.GetValueOrDefault()
+        };
+    } 
 }

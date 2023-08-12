@@ -9,6 +9,7 @@
     <DockerServiceName>proxy</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="create-script.sql" />
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>

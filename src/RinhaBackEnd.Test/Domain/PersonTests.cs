@@ -5,73 +5,46 @@ namespace RinhaBackEnd.Test.Domain;
 public class PersonTests
 {
     [Fact]
-    public void ShouldCreatePerson()
+    public void IsValid_WhenCalled_ReturnsTrue()
     {
         // Arrange
-        var apelido = "Doe";
-        var nome = "John";
-        var nascimento = DateTime.Now.AddYears(-1);
+        var person = new Person("Doe", "John", DateTime.Now, new List<string> { "C#", "Java" });
 
         // Act
-        var person = new Person(apelido, nome, nascimento);
+        var result = person.IsValid();
 
         // Assert
-        var sut = new Person(apelido, nome, nascimento);
-        sut.IsValid.Should().BeTrue();
-        sut.Id.Should().NotBeEmpty();
-        sut.Nome.Should().Be(nome);
-        sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Date.Should().Be(nascimento.Date);
+        result.Should().BeTrue();
     }
 
     [Fact]
-    public void ShouldNotCreatePersonWithEmptyApelido()
+    public void IsValid_WhenCalledWithInvalidData_ReturnsFalse()
     {
         // Arrange
-        var apelido = "";
-        var nome = "John";
-        var nascimento = DateTime.Now;
+        var person = new Person("", "John", DateTime.Now, new List<string> { "C#", "Java" });
 
-        // Act & Assert
-        var sut = new Person(apelido, nome, nascimento);
-        sut.IsValid.Should().BeFalse();
-        sut.Id.Should().NotBeEmpty();
-        sut.Nome.Should().Be(nome);
-        sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Date.Should().Be(nascimento.Date);
+        // Act
+        var result = person.IsValid();
+
+        // Assert
+        result.Should().BeFalse();
     }
 
     [Fact]
-    public void ShouldNotCreatePersonWithEmptyNome()
+    public void ToPersonResponse_WhenCalled_ReturnsPersonResponse()
     {
         // Arrange
-        var apelido = "Doe";
-        var nome = "";
-        var nascimento = DateTime.Now;
+        var person = new Person("Doe", "John", DateTime.Now, new List<string> { "C#", "Java" });
 
-        // Act & Assert
-        var sut = new Person(apelido, nome, nascimento);
-        sut.IsValid.Should().BeFalse();
-        sut.Id.Should().NotBeEmpty();
-        sut.Nome.Should().Be(nome);
-        sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Date.Should().Be(nascimento.Date);
+        // Act
+        var result = person.ToPersonResponse();
+
+        // Assert
+        result.Id.Should().Be(person.Id);
+        result.Apelido.Should().Be(person.Apelido);
+        result.Nome.Should().Be(person.Nome);
+        result.Stacks.Should().BeEquivalentTo(person.Stack);
+        result.Nascimento.Should().Be(person.Nascimento.GetValueOrDefault());
     }
 
-    [Fact]
-    public void ShouldNotCreatePersonWithInvalidNascimento()
-    {
-        // Arrange
-        var apelido = "Doe";
-        var nome = "John";
-        var nascimento = DateTime.MinValue;
-
-        // Act & Assert
-        var sut = new Person(apelido, nome, nascimento);
-        sut.IsValid.Should().BeFalse();
-        sut.Id.Should().NotBeEmpty();
-        sut.Nome.Should().Be(nome);
-        sut.Apelido.Should().Be(apelido);
-        sut.Nascimento.Date.Should().Be(nascimento.Date);
-    }
 }

@@ -7,9 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\RinhaBackEnd\appsettings.Benchmark.json" Link="appsettings.Benchmark.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="..\RinhaBackEnd\appsettings.Testing.json" Link="appsettings.Testing.json" />
   </ItemGroup>
 

@@ -17,7 +17,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.4GB'
+          memory: '0.5GB'
   api02:
     container_name: api02
     image: rinhabackend
@@ -34,7 +34,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.4GB'
+          memory: '0.5GB'
   db:
     container_name: database
     image: 'postgres:latest'
@@ -42,13 +42,15 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: '1.5GB'
+          memory: '1GB'
     ports:
        - 5432:5432
     environment:
        POSTGRES_USER: rinha
        POSTGRES_PASSWORD: 7653e869faa3 
        POSTGRES_DB: rinhadb
+    volumes:
+      - ./create-script.sql:/docker-entrypoint-initdb.d/create-script.sql
   redis:
     image: redis
     container_name: cache
@@ -58,7 +60,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.3GB'
+          memory: '0.7GB'
   proxy:
     container_name: proxy
     image: nginx:latest
@@ -73,4 +75,4 @@ services:
       resources:
         limits:
           cpus: '0.1'
-          memory: '0.2GB'
+          memory: '0.3GB'
