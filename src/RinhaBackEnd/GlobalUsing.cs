@@ -4,5 +4,6 @@ global using Microsoft.AspNetCore.Mvc;
 global using Microsoft.Extensions.Configuration;
 global using Npgsql;
 global using StackExchange.Redis;
+global using StackExchange.Redis.MultiplexerPool;
 global using System.Text;
 global using System.Text.Json;

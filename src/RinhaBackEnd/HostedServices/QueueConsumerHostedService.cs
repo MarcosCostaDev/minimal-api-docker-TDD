@@ -24,9 +24,11 @@ public class QueueConsumerHostedService : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             try
             {
-                using var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>();
-                var db = redis.GetDatabase();
+                var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexerPool>();
+                var pool = await redis.GetAsync();
+                var db = pool.Connection.GetDatabase();
 
+             
                 if (!consumerCreated && !(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
                 {
                     await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
@@ -59,7 +61,6 @@ public class QueueConsumerHostedService : BackgroundService
                     response.Nascimento,
                     response.Stack
                 }, commandType: System.Data.CommandType.Text);
-
             }
             catch (Exception ex)
             {
