@@ -12,7 +12,6 @@ services:
       - redis
     ports:
       - "80"
-      - "443"
     deploy:
       resources:
         limits:
@@ -29,7 +28,6 @@ services:
       - redis
     ports:
       - "80"
-      - "443"
     deploy:
       resources:
         limits:
@@ -42,7 +40,7 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: '1GB'
+          memory: '1.4GB'
     ports:
        - 5432:5432
     environment:
@@ -60,7 +58,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '1GB'
+          memory: '0.5GB'
   proxy:
     container_name: proxy
     image: nginx:latest
