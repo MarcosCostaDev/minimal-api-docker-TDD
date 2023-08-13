@@ -1,6 +1,5 @@
 ﻿using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
-using StackExchange.Redis;
 
 namespace RinhaBackEnd.HostedServices;
 
@@ -34,6 +33,8 @@ public class QueueConsumerHostedService : BackgroundService
         {
             try
             {
+                Thread.Sleep(5_000);
+
                 //db ??= pool.Connection.GetDatabase();
 
                 if (!string.IsNullOrWhiteSpace(id))
@@ -52,8 +53,7 @@ public class QueueConsumerHostedService : BackgroundService
 
                 id = streamResult.First().Id;
 
-                var json = await db.StringGetAsync($"personId:{streamResult.First()[EnvConsts.StreamPersonKey]}");
-                var response = json.ToString().DeserializeTo<PersonResponse>();
+                var response = streamResult.First()[EnvConsts.StreamPersonKey].ToString().DeserializeTo<PersonResponse>();
 
                 var connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
 
@@ -63,7 +63,7 @@ public class QueueConsumerHostedService : BackgroundService
                     response.Apelido,
                     response.Nome,
                     response.Nascimento,
-                    response.Stack
+                    Stack = response.GetStack(),
                 }, commandType: System.Data.CommandType.Text);
             }
             catch (NpgsqlException ex)

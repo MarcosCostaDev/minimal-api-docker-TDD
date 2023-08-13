@@ -9,10 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
 
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-});
+//builder.Services.Configure<ForwardedHeadersOptions>(options =>
+//{
+//    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+//});
 
 builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 {
@@ -28,10 +28,10 @@ builder.Services.AddHostedService<QueueConsumerHostedService>();
 
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+//app.UseForwardedHeaders(new ForwardedHeadersOptions
+//{
+//    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+//});
 
 app.MapGet("/ping", () => "pong");
 
@@ -53,11 +53,13 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request,
 
         if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
 
+        var responseJson = person.ToPersonResponse().ToJson();
+
         await db.StringSetAsync($"personApelido:{person.Apelido}", ".");
 
-        await db.StringSetAsync($"personId:{person.Id}", person.ToPersonResponse().ToJson());
+        await db.StringSetAsync($"personId:{person.Id}", responseJson);
 
-        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, person.Id.ToString()) });
+        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
     }
     catch (Exception ex)
     {
@@ -66,10 +68,12 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request,
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, 
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id, 
                                         [FromServices] NpgsqlConnection connection, 
                                         [FromServices] IConnectionMultiplexerPool redis, CancellationToken cancellationToken) =>
 {
+    if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
+
     var pool = await redis.GetAsync();
     var db = pool.Connection.GetDatabase();
 
@@ -123,8 +127,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-
-app.UseDeveloperExceptionPage();
 
 app.Use(next => context =>
 {

@@ -10,18 +10,20 @@ public class PersonResponse
     public string Nome { get; set; }
     public DateTime Nascimento { get; set; }
     [JsonIgnore]
-    public string? Stack { get; set; }
+    private string? _stack { get; set; }
+
+    public string GetStack() => string.IsNullOrWhiteSpace(_stack) ? "[]" : _stack;
 
     [JsonPropertyName("stack")]
     public IEnumerable<string>? Stacks
     {
         get
         {
-            return !string.IsNullOrEmpty(Stack) ? Stack.DeserializeTo<IEnumerable<string>>() : Enumerable.Empty<string>();
+            return !string.IsNullOrEmpty(_stack) ? _stack.DeserializeTo<IEnumerable<string>>() : Enumerable.Empty<string>();
         }
         set
         {
-            Stack = value?.ToJson();
+            _stack = value?.ToJson();
         }
     }
 }
