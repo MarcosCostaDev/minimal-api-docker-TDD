@@ -1,18 +1,25 @@
 ﻿using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
+using System.Globalization;
 
 namespace RinhaBackEnd.Domain;
 
-public class Person 
+public class Person
 {
     protected Person() { }
-    public Person(string apelido, string nome, DateTime? nascimento, IEnumerable<string>? stacks)
+    public Person(string apelido, string nome, string nascimento, IEnumerable<string>? stacks)
     {
         Id = Guid.NewGuid();
         Apelido = apelido;
         Nome = nome;
-        Nascimento = nascimento;
+        Nascimento = null;
         Stack = stacks;
+
+        if (!string.IsNullOrWhiteSpace(nascimento) && 
+            DateTime.TryParseExact(nascimento, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var nascimentoResult))
+        {
+            Nascimento = nascimentoResult;
+        }
     }
 
     public Guid Id { get; private set; }
@@ -46,5 +53,5 @@ public class Person
             Stacks = Stack,
             Nascimento = Nascimento.GetValueOrDefault()
         };
-    } 
+    }
 }
