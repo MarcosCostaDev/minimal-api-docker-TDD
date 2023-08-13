@@ -1,5 +1,4 @@
-﻿using RinhaBackEnd.Domain;
-using RinhaBackEnd.Dtos.Response;
+﻿using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 
 namespace RinhaBackEnd.HostedServices;

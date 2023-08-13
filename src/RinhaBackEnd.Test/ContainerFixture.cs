@@ -10,7 +10,7 @@ public class ContainerFixture : IIntegrationTest, IDisposable
     {
         Client = new HttpClient
         {
-            BaseAddress = new Uri("http://localhost:9999")
+            BaseAddress = new Uri("http://proxy:9999")
         };
         var builder = new ConfigurationBuilder()
                          .SetBasePath(Directory.GetCurrentDirectory())

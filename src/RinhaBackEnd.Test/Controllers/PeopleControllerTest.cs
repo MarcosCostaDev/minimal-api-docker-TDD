@@ -47,7 +47,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var request = new PersonRequest
         {
             Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -62,7 +62,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento?.Date);
+        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
         sut.Stacks.Should().Contain(request.Stack);
     }
 
@@ -73,7 +73,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var request = new PersonRequest
         {
             Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -90,7 +90,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         response2.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento?.Date);
+        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
         sut.Stacks.Should().Contain(request.Stack);
     }
 
@@ -101,7 +101,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var request = new PersonRequest
         {
             Apelido = "",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -115,7 +115,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento?.Date.Should().Be(request.Nascimento?.Date);
+        sut.Nascimento.Should().Be(request.Nascimento);
         sut.Stack.Should().Contain(request.Stack);
     }
 
@@ -126,7 +126,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var request = new PersonRequest
         {
             Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -144,7 +144,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento?.Date);
+        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
         sut.Stacks.Should().Contain(request.Stack);
     }
 
@@ -167,7 +167,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
             var request = new PersonRequest
             {
                 Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date,
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date.ToString("yyyy-MM-dd"),
                 Nome = $"Nome",
                 Stack = languages
             };
@@ -198,7 +198,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
             var request = new PersonRequest
             {
                 Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date,
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date.ToString("yyyy-MM-dd"),
                 Nome = $"Nome",
                 Stack = languages
             };
@@ -231,7 +231,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
             var request = new PersonRequest
             {
                 Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date,
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date.ToString("yyyy-MM-dd"),
                 Nome = $"Nome",
                 Stack = languages
             };

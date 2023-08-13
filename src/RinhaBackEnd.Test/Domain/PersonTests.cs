@@ -8,7 +8,7 @@ public class PersonTests
     public void IsValid_WhenCalled_ReturnsTrue()
     {
         // Arrange
-        var person = new Person("Doe", "John", DateTime.Now, new List<string> { "C#", "Java" });
+        var person = new Person("Doe", "John", DateTime.Now.ToString("yyyy-MM-dd"), new List<string> { "C#", "Java" });
 
         // Act
         var result = person.IsValid();
@@ -21,7 +21,7 @@ public class PersonTests
     public void IsValid_WhenCalledWithInvalidData_ReturnsFalse()
     {
         // Arrange
-        var person = new Person("", "John", DateTime.Now, new List<string> { "C#", "Java" });
+        var person = new Person("", "John", DateTime.Now.ToString("yyyy-MM-dd"), new List<string> { "C#", "Java" });
 
         // Act
         var result = person.IsValid();
@@ -34,7 +34,7 @@ public class PersonTests
     public void ToPersonResponse_WhenCalled_ReturnsPersonResponse()
     {
         // Arrange
-        var person = new Person("Doe", "John", DateTime.Now, new List<string> { "C#", "Java" });
+        var person = new Person("Doe", "John", DateTime.Now.ToString("yyyy-MM-dd"), new List<string> { "C#", "Java" });
 
         // Act
         var result = person.ToPersonResponse();
