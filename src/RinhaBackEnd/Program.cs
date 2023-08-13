@@ -73,7 +73,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
     var pool = await redis.GetAsync();
     var db = pool.Connection.GetDatabase();
 
-    var resultFunc = async () =>
+    var queryFunc = async () =>
     {
         var result = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
@@ -87,11 +87,13 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, Npgsql
     var result = await db.StringGetAsync($"personId:{id}");
     if (!result.HasValue)
     {
-        var queryResult = await resultFunc.Invoke();
+        var queryResult = await queryFunc.Invoke();
 
         if (queryResult == null) return Results.NotFound();
 
         await db.StringGetSetAsync($"personId:{id}", queryResult.ToJson());
+
+        return Results.Ok(queryResult);
     }
 
     return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");

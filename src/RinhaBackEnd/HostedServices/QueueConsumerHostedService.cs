@@ -15,20 +15,20 @@ public class QueueConsumerHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-
         var id = string.Empty;
         string consumerId = null!;
         var consumerCreated = false;
+        using var scope = _serviceProvider.CreateScope();
+
+        var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexerPool>();
+        var pool = await redis.GetAsync();
+        
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var scope = _serviceProvider.CreateScope();
             try
             {
-                var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexerPool>();
-                var pool = await redis.GetAsync();
                 var db = pool.Connection.GetDatabase();
 
-             
                 if (!consumerCreated && !(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
                 {
                     await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
