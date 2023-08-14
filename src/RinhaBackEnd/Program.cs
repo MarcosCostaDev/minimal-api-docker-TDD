@@ -1,32 +1,28 @@
-using Microsoft.Extensions.Caching.Distributed;
-using RinhaBackEnd.CustomConfig;
+using RinhaBackEnd;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
-using RinhaBackEnd.Infra.Contexts;
+using RinhaBackEnd.HostedServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<PeopleDbContext>(options =>
-{
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PeopleDbConnection"));
-}, ServiceLifetime.Scoped);
+builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
-builder.Services.AddStackExchangeRedisCache(options =>
+builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("RedisConnection");
-    options.InstanceName = "RinhaBackend";
+    return ConnectionMultiplexerPoolFactory.Create(
+                poolSize: 100,
+                configuration: builder.Configuration.GetConnectionString("RedisConnection"),
+                connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
 });
 
-builder.Services.AddCustomAutoMapper();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddHostedService<QueueConsumerHostedService>();
 
 var app = builder.Build();
 
@@ -37,93 +33,102 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache, CancellationToken cancelationToken) =>
+app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
+                               [FromServices] NpgsqlConnection connection,
+                               [FromServices] IConnectionMultiplexerPool redis) =>
 {
-    var contract = new Contract<Notification>();
+    if(request == null) return Results.UnprocessableEntity(request);;
 
-    var person = new Person(request.Apelido, request.Nome, request.Nascimento);
+    var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
 
-    await dbContext.People.AddAsync(person, cancelationToken);
+    if (!person.IsValid()) return Results.UnprocessableEntity(request);
 
-    contract.AddNotifications(person);
-
-    if (request.Stack != null)
-        foreach (var stackName in request.Stack)
-        {
-            var stack = new Stack(stackName);
-
-            var personStack = new PersonStack(person, stack);
-
-            await dbContext.PersonStacks.AddAsync(personStack, cancelationToken);
-
-            contract.AddNotifications(personStack);
-        }
-
-    if (!contract.IsValid) return Results.UnprocessableEntity(request);
-
-    var existApelido = await cache.GetAsync($"personApelido:{person.Apelido}", cancelationToken);
-
-    if (existApelido != null) Results.UnprocessableEntity(request);
-
-    PersonResponse result;
+    var result = person.ToPersonResponse();
     try
     {
-        await dbContext.SaveChangesAsync(cancelationToken);
-        result = mapper.Map<PersonResponse>(person);
-        await cache.SetStringAsync($"personApelido:{person.Apelido}", ".", cancelationToken);
-        await cache.SetStringAsync(person.Id.ToString(), result.ToJson(), cancelationToken);
+        var pool = await redis.GetAsync();
+        var db = pool.Connection.GetDatabase();
+
+        var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
+
+        if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
+
+        var responseJson = person.ToPersonResponse().ToJson();
+
+        await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[] {
+            new($"personApelido:{person.Apelido}", "."),
+            new($"personId:{person.Id}", responseJson)
+        });
+
+        await db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
+        await db.KeyExpireAsync($"personId:{person.Id}", TimeSpan.FromMinutes(6));
+
+        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
     }
-    catch (Exception)
+    catch (Exception ex)
     {
         return Results.UnprocessableEntity(request);
     }
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, PeopleDbContext dbContext, IMapper mapper, IDistributedCache cache, CancellationToken cancelationToken) =>
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
+                                        [FromServices] NpgsqlConnection connection,
+                                        [FromServices] IConnectionMultiplexerPool redis) =>
 {
-    var result = await cache.GetOrCreateStringAsync(id.ToString(), () =>
-    {
-        return dbContext.People
-                        .Include(p => p.PersonStacks)
-                        .ThenInclude(p => p.Stack)
-                        .Where(p => p.Id == id)
-                        .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(cancelationToken);
-    }, cancellationToken: cancelationToken);
+    if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
 
-    return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
+    var pool = await redis.GetAsync();
+
+    var db = pool.Connection.GetDatabase();
+
+    var result = await db.StringGetAsync($"personId:{id}");
+
+    if (result.HasValue) return Results.Text(result, contentType: "application/json");
+
+    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
+                                                                    ID, APELIDO, NOME, NASCIMENTO, STACK 
+                                                                FROM 
+                                                                    PEOPLE 
+                                                                WHERE 
+                                                                    ID = @ID", new { id }, 
+                                                                    commandType: System.Data.CommandType.Text);
+
+    if (queryResult == null) return Results.NotFound();
+
+    await db.StringSetAsync($"personId:{id}", queryResult.ToJson());
+
+    return Results.Ok(queryResult);
 });
 
-app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string search, PeopleDbContext dbContext, IMapper mapper, CancellationToken token) =>
+app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServices] NpgsqlConnection connection) =>
 {
-    var query = PredicateBuilder.New<Person>();
-    query = query.Or(p => EF.Functions.Like(p.Nome, $"%{search}%"));
-    query = query.Or(p => EF.Functions.Like(p.Apelido, $"%{search}%"));
-    query = query.Or(p => p.PersonStacks.Any(s => EF.Functions.Like(s.Stack.Nome, $"%{search}%")));
-    var result = await dbContext.People
-                                .Include(p => p.PersonStacks)
-                                .ThenInclude(p => p.Stack)
-                                .Where(query)
-                                .AsNoTracking()
-                                .ProjectTo<PersonResponse>(mapper.ConfigurationProvider)
-                                .ToListAsync(token);
+    if (string.IsNullOrWhiteSpace(search)) return Results.BadRequest();
+
+    var query = @"SELECT
+                      ID, APELIDO, NOME, NASCIMENTO, STACK 
+                  FROM 
+                      PEOPLE 
+                  WHERE 
+                      APELIDO LIKE @SEARCH
+                      OR NOME LIKE @SEARCH
+                      OR STACK LIKE @SEARCH
+                      limit 50;";
+
+    var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
     return Results.Ok(result);
+
 });
 
-app.MapGet("/contagem-pessoas", async (PeopleDbContext dbContext, CancellationToken token) =>
+app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
-    return Results.Ok(await dbContext.People.AsNoTracking().CountAsync(token));
+    return Results.Ok(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PEOPLE"));
 });
 
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseMigrationsEndPoint();
 }
-
-app.UseDeveloperExceptionPage();
 
 app.Use(next => context =>
 {
@@ -135,26 +140,11 @@ app.UseExceptionHandler(exceptionHandlerApp =>
     exceptionHandlerApp.Run(async context =>
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync(await context.Request.GetRawBodyAsync());
+        context.Response.ContentType = context.Request.ContentType;
+        context.Response.Body = context.Request.Body;
     });
 });
 
-
-using (IServiceScope scope = app.Services.CreateScope())
-    try
-    {
-        scope.ServiceProvider.GetService<PeopleDbContext>().Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-    }
-
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1");
-});
 app.Run();
 
 

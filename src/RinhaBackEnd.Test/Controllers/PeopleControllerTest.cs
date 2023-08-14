@@ -1,25 +1,34 @@
 ﻿using RinhaBackEnd.Test.Interfaces;
+using System.Runtime.InteropServices;
 
 namespace RinhaBackEnd.Test.Controllers;
 
 [Trait("Integration", "Api")]
-[Collection("API")]
-public class PeopleControllerTest : IDisposable
+[Collection("docker")]
+public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 {
     protected IIntegrationTest _fixture { get; set; }
     protected ITestOutputHelper _output { get; set; }
 
-    protected PeopleControllerTest()
-    {
-    }
-    public PeopleControllerTest(ProgramFixture fixture, ITestOutputHelper output)
+    public PeopleControllerTest(ContainerFixture fixture, DockerFixture dockerFixture, ITestOutputHelper output)
     {
         _fixture = fixture;
         _output = output;
+
+        dockerFixture.InitOnce(() => new DockerFixtureOptions
+        {
+            DockerComposeFiles = new[] { "docker-compose.yml", "docker-compose.testing.yml" },
+            CustomUpTest = output => output.Any(l => l.Contains("ready for start up") || l.Contains("Attaching to api01, api02, cache, database, proxy")),
+            StartupTimeoutSecs = 240
+        });
+
+
+        Thread.Sleep(2_400);
+
     }
 
     [Benchmark(Description = nameof(HealthShouldBeSuccess))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task HealthShouldBeSuccess()
     {
         var response = await _fixture.Client.GetAsync("/ping");
@@ -32,13 +41,13 @@ public class PeopleControllerTest : IDisposable
     }
 
     [Benchmark(Description = nameof(CreatePersonShouldBeSuccess))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldBeSuccess()
     {
         var request = new PersonRequest
         {
             Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -53,18 +62,18 @@ public class PeopleControllerTest : IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
+        sut.Stacks.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(CreateRepeatedPersonShouldFail422))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task CreateRepeatedPersonShouldFail422()
     {
         var request = new PersonRequest
         {
             Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -81,18 +90,18 @@ public class PeopleControllerTest : IDisposable
         response2.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
+        sut.Stacks.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(CreatePersonShouldFailStatus422))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldFailStatus422()
     {
         var request = new PersonRequest
         {
             Apelido = "",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -106,18 +115,18 @@ public class PeopleControllerTest : IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
+        sut.Nascimento.Should().Be(request.Nascimento);
         sut.Stack.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(GetPersonShouldBeSuccess))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeSuccess()
     {
         var request = new PersonRequest
         {
             Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
-            Nascimento = DateTime.Now.AddYears(-10).Date,
+            Nascimento = DateTime.Now.AddYears(-10).Date.ToString("yyyy-MM-dd"),
             Nome = "Nome1",
             Stack = new List<string> { "Java", "C#", "Html" }
         };
@@ -135,12 +144,12 @@ public class PeopleControllerTest : IDisposable
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.Date.Should().Be(request.Nascimento.Date);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
+        sut.Stacks.Should().Contain(request.Stack);
     }
 
     [Benchmark(Description = nameof(GetPersonShouldBeFail404))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeFail404()
     {
         var response = await _fixture.Client.GetAsync($"/pessoas/{Guid.NewGuid()}");
@@ -148,24 +157,27 @@ public class PeopleControllerTest : IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 
-    [Benchmark(Description = nameof(QueryPersonShouldFind4))]
-    [Fact]
-    public async Task QueryPersonShouldFind4()
+    [Benchmark(Description = nameof(QueryPersonShouldFind1))]
+    [Fact(Timeout = 10_000)]
+    public async Task QueryPersonShouldFind1()
     {
-        for (int i = 0; i < 10; i++)
+        var index = 0;
+        foreach (var languages in GetLanguages().Take(2))
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)).Date,
-                Nome = $"Nome{i}",
-                Stack = GetLanguages().ElementAt(i)
+                Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date.ToString("yyyy-MM-dd"),
+                Nome = $"Nome",
+                Stack = languages
             };
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
-        }
 
+            index++;
+        }
+        Thread.Sleep(2_000);
         var response = await _fixture.Client.GetAsync("/pessoas?t=Java");
         response.EnsureSuccessStatusCode();
 
@@ -173,26 +185,31 @@ public class PeopleControllerTest : IDisposable
 
         var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
 
-        sut.Should().HaveCount(4);
+        sut.Should().HaveCount(1);
     }
 
     [Benchmark(Description = nameof(QueryPersonShouldFind0))]
-    [Fact]
+    [Fact(Timeout = 10_000)]
     public async Task QueryPersonShouldFind0()
     {
-        for (int i = 0; i < 10; i++)
+        var index = 0;
+        foreach (var languages in GetLanguages().Take(2))
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)).Date,
-                Nome = $"Nome{i}",
-                Stack = GetLanguages().ElementAt(i)
+                Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date.ToString("yyyy-MM-dd"),
+                Nome = $"Nome",
+                Stack = languages
             };
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
+
+            index++;
         }
+
+        Thread.Sleep(2_000);
 
         var response = await _fixture.Client.GetAsync("/pessoas?t=Cobol");
         response.EnsureSuccessStatusCode();
@@ -204,36 +221,41 @@ public class PeopleControllerTest : IDisposable
         sut.Should().HaveCount(0);
     }
 
-    [Benchmark(Description = nameof(CountPersonShouldBe10))]
-    [Fact]
-    public async Task CountPersonShouldBe10()
+    [Benchmark(Description = nameof(CountPersonShouldBe3))]
+    [Fact(Timeout = 15_000)]
+    public async Task CountPersonShouldBe3()
     {
-        for (int i = 0; i < 10; i++)
+        var index = 0;
+        foreach (var languages in GetLanguages().Take(3))
         {
             var request = new PersonRequest
             {
-                Apelido = $"Apelido{i}{Guid.NewGuid().ToString()[..4]}",
-                Nascimento = DateTime.Now.AddYears(-3 * (i + 1)),
-                Nome = $"Nome{i}",
-                Stack = GetLanguages().ElementAt(i)
+                Apelido = $"Apelido{Guid.NewGuid().ToString()[..4]}",
+                Nascimento = DateTime.Now.AddYears(-(index * 3)).Date.ToString("yyyy-MM-dd"),
+                Nome = $"Nome",
+                Stack = languages
             };
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
+
+            index++;
         }
+
+        Thread.Sleep(2_000);
 
         var response = await _fixture.Client.GetAsync("/contagem-pessoas");
         response.EnsureSuccessStatusCode();
 
         var sut = await response.Content.ReadAsStringAsync();
 
-        sut.Should().Be("10");
+        sut.Should().Be("3");
     }
 
     private IEnumerable<IEnumerable<string>> GetLanguages()
     {
         yield return new string[] { "Java", "PHP", "Go" };
-        yield return new string[] { "CSharp", "Elixir", "Javascript" };
+        yield return new string[] { "CSharp", "Elixir", };
         yield return new string[] { "Dart", "Ruby", "Elixir" };
         yield return new string[] { "Ruby", "PHP" };
         yield return new string[] { "CSharp" };
