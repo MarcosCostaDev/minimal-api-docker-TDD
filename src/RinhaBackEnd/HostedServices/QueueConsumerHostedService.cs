@@ -1,6 +1,5 @@
 ﻿using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
-using StackExchange.Redis;
 
 namespace RinhaBackEnd.HostedServices;
 
@@ -17,7 +16,6 @@ public class QueueConsumerHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var id = string.Empty;
         string consumerId = Guid.NewGuid().ToString()[..5];
         using var scope = _serviceProvider.CreateScope();
 
@@ -34,37 +32,35 @@ public class QueueConsumerHostedService : BackgroundService
         {
             try
             {
-                //db ??= pool.Connection.GetDatabase();
+                Thread.Sleep(1_000);
 
-                if (!string.IsNullOrWhiteSpace(id))
-                {
-                    await db.StreamAcknowledgeAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, id);
-                    id = string.Empty;
-                }
-
-                var streamResult = await db.StreamReadGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, consumerId);
+                var streamResult = await db.StreamReadGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, consumerId, count: 10);
 
                 if (!streamResult.Any())
                 {
-                    Thread.Sleep(1_000);
+                    Thread.Sleep(2_000);
                     continue;
                 }
 
-                id = streamResult.First().Id;
+                db = pool.Connection.GetDatabase();
 
-                var json = await db.StringGetAsync($"personId:{streamResult.First()[EnvConsts.StreamPersonKey]}");
-                var response = json.ToString().DeserializeTo<PersonResponse>();
+                var insertItems = streamResult.Select(item => {
+                    var response = item[EnvConsts.StreamPersonKey].ToString().DeserializeTo<PersonResponse>();
+                    return new
+                    {
+                        response.Id,
+                        response.Apelido,
+                        response.Nome,
+                        response.Nascimento,
+                        Stack = response.GetStack(),
+                    };
+                });
 
                 var connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
 
-                await connection.ExecuteAsync("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES (@ID, @APELIDO, @NOME, @NASCIMENTO, @STACK::jsonb)", new
-                {
-                    response.Id,
-                    response.Apelido,
-                    response.Nome,
-                    response.Nascimento,
-                    response.Stack
-                }, commandType: System.Data.CommandType.Text);
+                await connection.ExecuteAsync("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES (@ID, @APELIDO, @NOME, @NASCIMENTO, @STACK)", insertItems, commandType: System.Data.CommandType.Text);
+
+                await db.StreamAcknowledgeAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, streamResult.Select(p => p.Id).ToArray());
             }
             catch (NpgsqlException ex)
             {

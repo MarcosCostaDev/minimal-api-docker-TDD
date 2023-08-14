@@ -22,8 +22,6 @@ builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
                 connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
 });
 
-
-
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
 var app = builder.Build();
@@ -35,10 +33,12 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.MapGet("/ping", () => "pong");
 
-app.MapPost("/pessoas", async ([FromBody] PersonRequest request, 
-                               [FromServices] NpgsqlConnection connection, 
+app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
+                               [FromServices] NpgsqlConnection connection,
                                [FromServices] IConnectionMultiplexerPool redis) =>
 {
+    if(request == null) return Results.UnprocessableEntity(request);;
+
     var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
 
     if (!person.IsValid()) return Results.UnprocessableEntity(request);
@@ -53,11 +53,17 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request,
 
         if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
 
-        await db.StringSetAsync($"personApelido:{person.Apelido}", ".");
+        var responseJson = person.ToPersonResponse().ToJson();
 
-        await db.StringSetAsync($"personId:{person.Id}", person.ToPersonResponse().ToJson());
+        await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[] {
+            new($"personApelido:{person.Apelido}", "."),
+            new($"personId:{person.Id}", responseJson)
+        });
 
-        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, person.Id.ToString()) });
+        await db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
+        await db.KeyExpireAsync($"personId:{person.Id}", TimeSpan.FromMinutes(6));
+
+        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
     }
     catch (Exception ex)
     {
@@ -66,35 +72,36 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest request,
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
-app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid id, 
-                                        [FromServices] NpgsqlConnection connection, 
-                                        [FromServices] IConnectionMultiplexerPool redis, CancellationToken cancellationToken) =>
+app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
+                                        [FromServices] NpgsqlConnection connection,
+                                        [FromServices] IConnectionMultiplexerPool redis) =>
 {
+    if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
+
     var pool = await redis.GetAsync();
+
     var db = pool.Connection.GetDatabase();
 
     var result = await db.StringGetAsync($"personId:{id}");
 
-    if (!result.HasValue)
-    {
-        var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
+    if (result.HasValue) return Results.Text(result, contentType: "application/json");
+
+    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
                                                                     PEOPLE 
                                                                 WHERE 
-                                                                    ID = @ID", new { id }, commandType: System.Data.CommandType.Text); ;
+                                                                    ID = @ID", new { id }, 
+                                                                    commandType: System.Data.CommandType.Text);
 
-        if (queryResult == null) return Results.NotFound();
+    if (queryResult == null) return Results.NotFound();
 
-        await db.StringGetSetAsync($"personId:{id}", queryResult.ToJson());
+    await db.StringSetAsync($"personId:{id}", queryResult.ToJson());
 
-        return Results.Ok(queryResult);
-    }
-
-    return string.IsNullOrEmpty(result) ? Results.NotFound() : Results.Text(result, contentType: "application/json");
+    return Results.Ok(queryResult);
 });
 
-app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, NpgsqlConnection connection) =>
+app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServices] NpgsqlConnection connection) =>
 {
     if (string.IsNullOrWhiteSpace(search)) return Results.BadRequest();
 
@@ -105,8 +112,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, NpgsqlConn
                   WHERE 
                       APELIDO LIKE @SEARCH
                       OR NOME LIKE @SEARCH
-                      OR EXISTS (SELECT 1 FROM jsonb_array_elements(STACK) AS x(STACK)
-                                          WHERE  STACK::text like @SEARCH)
+                      OR STACK LIKE @SEARCH
                       limit 50;";
 
     var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
@@ -114,7 +120,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, NpgsqlConn
 
 });
 
-app.MapGet("/contagem-pessoas", async (NpgsqlConnection connection) =>
+app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
     return Results.Ok(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PEOPLE"));
 });
@@ -123,8 +129,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
-
-app.UseDeveloperExceptionPage();
 
 app.Use(next => context =>
 {

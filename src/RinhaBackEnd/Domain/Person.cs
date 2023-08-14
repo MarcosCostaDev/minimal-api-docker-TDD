@@ -35,12 +35,13 @@ public class Person
 
     public bool IsValid()
     {
-        return !(string.IsNullOrWhiteSpace(Apelido)
-                || Apelido.Length > 32
-                || string.IsNullOrWhiteSpace(Nome)
-                || Nome.Length > 32
-                || !Nascimento.HasValue
-                || Stack.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32));
+        if (string.IsNullOrWhiteSpace(Apelido)) return false;
+        if (Apelido.Length > 32) return false;
+        if (string.IsNullOrWhiteSpace(Nome)) return false;
+        if (Nome.Length > 32) return false;
+        if (!Nascimento.HasValue) return false;
+        if (Stack != null && Stack.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32)) return false;
+        return true;
     }
 
     public PersonResponse ToPersonResponse()
