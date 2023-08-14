@@ -4,71 +4,67 @@ using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
+using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
-
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
+builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
 });
+
+builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
 
 builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 {
     return ConnectionMultiplexerPoolFactory.Create(
-                poolSize: 100,
+                poolSize: 50,
                 configuration: builder.Configuration.GetConnectionString("RedisConnection"),
                 connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
 });
+
+builder.Services.AddSingleton(options => new ConcurrentQueue<PersonResponse>());
 
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
-
 app.MapGet("/ping", () => "pong");
 
 app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
                                [FromServices] NpgsqlConnection connection,
-                               [FromServices] IConnectionMultiplexerPool redis) =>
+                               [FromServices] IConnectionMultiplexerPool redis,
+                               ConcurrentQueue<PersonResponse> apelidosUsados) =>
 {
-    if(request == null) return Results.UnprocessableEntity(request);;
+    if (request == null) return Results.UnprocessableEntity(request);
 
     var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
 
     if (!person.IsValid()) return Results.UnprocessableEntity(request);
 
+    var pool = await redis.GetAsync();
+
+    var db = pool.Connection.GetDatabase();
+
+    var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
+
+    if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
+
+
+
     var result = person.ToPersonResponse();
-    try
-    {
-        var pool = await redis.GetAsync();
-        var db = pool.Connection.GetDatabase();
 
-        var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
+   // var responseJson = result.ToJson();
 
-        if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
+    await db.StringSetAsync($"personApelido:{person.Apelido}", ".");
 
-        var responseJson = person.ToPersonResponse().ToJson();
+    _ = db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
 
-        await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[] {
-            new($"personApelido:{person.Apelido}", "."),
-            new($"personId:{person.Id}", responseJson)
-        });
+    apelidosUsados.Enqueue(result);
+   // _ = db.KeyExpireAsync($"personId:{person.Id}", TimeSpan.FromMinutes(6));
 
-        await db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
-        await db.KeyExpireAsync($"personId:{person.Id}", TimeSpan.FromMinutes(6));
+    //  await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
 
-        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
-    }
-    catch (Exception ex)
-    {
-        return Results.UnprocessableEntity(request);
-    }
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
@@ -91,7 +87,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                                                 FROM 
                                                                     PEOPLE 
                                                                 WHERE 
-                                                                    ID = @ID", new { id }, 
+                                                                    ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
     if (queryResult == null) return Results.NotFound();
