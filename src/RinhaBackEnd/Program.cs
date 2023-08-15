@@ -8,11 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
+    serverOptions.Limits.MaxConcurrentConnections = 10_000;
     serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
     serverOptions.AllowSynchronousIO = true;
 });
 
-builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
+builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection")!, ServiceLifetime.Scoped);
 
 builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 {
@@ -23,6 +24,8 @@ builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 });
 
 builder.Services.AddSingleton(options => new ConcurrentQueue<PersonResponse>());
+
+builder.Services.AddSingleton(options => new ConcurrentDictionary<string, PersonResponse>());
 
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
@@ -37,7 +40,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 {
     if (request == null) return Results.UnprocessableEntity(request);
 
-    var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
+    var person = new Person(request.Apelido!, request.Nome!, request.Nascimento!, request.Stack);
 
     if (!person.IsValid()) return Results.UnprocessableEntity(request);
 
@@ -115,7 +118,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
 
 app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
-    return Results.Ok(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PEOPLE"));
+    return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PEOPLE"));
 });
 
 if (app.Environment.IsDevelopment())
@@ -130,11 +133,12 @@ app.Use(next => context =>
 });
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
-    exceptionHandlerApp.Run(async context =>
+    exceptionHandlerApp.Run(context =>
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         context.Response.ContentType = context.Request.ContentType;
         context.Response.Body = context.Request.Body;
+        return Task.CompletedTask;
     });
 });
 

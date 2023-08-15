@@ -9,7 +9,6 @@ Project Url [https://github.com/MarcosCostaDev/minimal-api-docker-TDD](https://g
   - .NET Core (.NET 7)
   - Swagger
   - xUnit (Test framework)
-  - BenchmarkDotnet 
   - Docker / Docker compose (container orchestrator)
   - Redis (Distributed Cache)
   - Nginx (Load balancer)
@@ -40,20 +39,13 @@ Project Url [https://github.com/MarcosCostaDev/minimal-api-docker-TDD](https://g
 
 ### Learn more
 
-#### Running benchmark
-
-The benchmark is running using the Test project. The process will execute firstly a `docker-compose up` and then execute many requests against the API. 
-  - Open the `./src` folder
-  - Open a `terminal` / `bash` and execute `dotnet test RinhaBackEnd.sln --filter 'Integration!=ignore'`
-  - After execution, you will be able to see the table of benchmark results.
-
 #### Running on Visual Studio
 
 The project originally was created using Visual Studio 2022 Community Edition, but you can download its [most recent version](https://visualstudio.microsoft.com/vs/community/) and you need to download the [Visual Studio Container tools](https://learn.microsoft.com/en-us/visualstudio/containers/overview?view=vs-2022) for executing the project.
 
 #### xUnit and integration tests
 
-In spite of we are using **Posgresql** as a "Production database", the integration tests of this project run over the **SQLite**.
+The integration test runs on docker containers that simulate this project in "Production".
 
 #### Stress Test with the Postman
 
@@ -65,7 +57,4 @@ After you execute the application using `Docker-compose up` or run it using Visu
 4. Right side, adjust the order of execution: place the `POST /pessoas` above the `GET /pessoas/:id` this will avoid trying to get a person that does not exist.
 5. Left side of the Runner window, select `performance`, and use the configuration you want.
 6. Click on run.
-
-
-<!--Add-Migration Initial -context PeopleDbContext -project RinhaBackEnd -StartupProject RinhaBackEnd  -Args "-- --provider Sqlite"-->
 
