@@ -15,6 +15,5 @@ namespace RinhaBackEnd.Extensions
 
             yield break;
         }
-
     }
 }

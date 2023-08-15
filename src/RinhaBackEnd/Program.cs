@@ -1,8 +1,11 @@
+using Microsoft.AspNetCore.Mvc;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
+using System.Text;
+using static System.Net.WebRequestMethods;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +30,7 @@ app.MapGet("/ping", () => "pong");
 app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
                                [FromServices] NpgsqlConnection connection,
                                [FromServices] IConnectionMultiplexerPool redis,
-                               [FromServices] ConcurrentQueue<PersonResponse> apelidosUsados) =>
+                               [FromServices] ConcurrentQueue<PersonResponse> peopleToBeInserted) =>
 {
     if (request == null) return Results.UnprocessableEntity(request);
 
@@ -45,11 +48,16 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     var result = person.ToPersonResponse();
 
-    await db.StringSetAsync($"personApelido:{person.Apelido}", ".");
-    await db.StringSetAsync($"personId:{person.Id}", result.ToJson());
-    _ = db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
+    peopleToBeInserted.Enqueue(result);
 
-    apelidosUsados.Enqueue(result);
+    var jsonResult = result.ToJson();
+    await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[]
+    {
+        new($"personApelido:{person.Apelido}", "."),
+        new($"personId:{person.Id}", jsonResult)
+    });
+
+    _ = db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
 
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });

@@ -18,4 +18,14 @@ public static class JsonExtensions
 
         return JsonSerializer.Deserialize<T>(json)!;
     }
+
+    public static Stream ToStream(this string s)
+    {
+        return s.ToStream(Encoding.UTF8);
+    }
+
+    public static Stream ToStream(this string s, Encoding encoding)
+    {
+        return new MemoryStream(encoding.GetBytes(s ?? ""));
+    }
 }

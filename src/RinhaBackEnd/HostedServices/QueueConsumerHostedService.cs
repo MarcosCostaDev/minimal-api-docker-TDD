@@ -26,11 +26,11 @@ public class QueueConsumerHostedService : BackgroundService
             try
             {
                 var queue = _serviceProvider.GetRequiredService<ConcurrentQueue<PersonResponse>>();
-                var peopleInQueue = queue.Dequeue(60).ToList();
+                var peopleInQueue = queue.Dequeue(30).ToList();
 
                 if (!peopleInQueue.Any())
                 {
-                    await Task.Delay(4_000, stoppingToken);
+                    await Task.Delay(3_000, stoppingToken);
                     continue;
                 }
 
@@ -39,9 +39,9 @@ public class QueueConsumerHostedService : BackgroundService
 
                 await using var batch = new NpgsqlBatch(connection);
 
-                for (int i = 0; i < peopleInQueue.Count(); i++)
+                for (int i = 0; i < peopleInQueue.Count; i++)
                 {
-                    var response = peopleInQueue.ElementAt(i);
+                    var response = peopleInQueue[i];
                     var cmd = new NpgsqlBatchCommand("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
                     cmd.Parameters.AddWithValue(response.Id);
                     cmd.Parameters.AddWithValue(response.Apelido);
