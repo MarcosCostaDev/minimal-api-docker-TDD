@@ -4,10 +4,7 @@ public static class JsonExtensions
 {
     public static string ToJson(this object @object)
     {
-        return JsonSerializer.Serialize(@object, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        return JsonSerializer.Serialize(@object);
     }
 
     public static HttpContent ToJsonHttpContent(this object @object)
@@ -19,9 +16,6 @@ public static class JsonExtensions
 
         if (string.IsNullOrEmpty(json)) return default!;
 
-        return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        })!;
+        return JsonSerializer.Deserialize<T>(json)!;
     }
 }
