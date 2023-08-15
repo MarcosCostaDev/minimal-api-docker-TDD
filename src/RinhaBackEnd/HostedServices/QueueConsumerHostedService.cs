@@ -1,6 +1,5 @@
 ﻿using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
-using System.Collections.Concurrent;
 
 namespace RinhaBackEnd.HostedServices;
 
@@ -17,38 +16,32 @@ public class QueueConsumerHostedService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        string consumerId = Guid.NewGuid().ToString()[..5];
+        
         using var scope = _serviceProvider.CreateScope();
-
-        var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexerPool>();
-        var pool = await redis.GetAsync();
-        var db = pool.Connection.GetDatabase();
-        var queue = scope.ServiceProvider.GetRequiredService<ConcurrentQueue<PersonResponse>>();
-
+    
         while (!stoppingToken.IsCancellationRequested)
         {
-            Thread.Sleep(1_000);
-            NpgsqlConnection connection = null;
+            await Task.Delay(1_000, stoppingToken);
+            NpgsqlConnection connection = null!;
             try
             {
-                var peopleInQueue = queue.Dequeue(20);
+                var queue = _serviceProvider.GetRequiredService<ConcurrentQueue<PersonResponse>>();
+                var peopleInQueue = queue.Dequeue(30).ToList();
 
                 if (!peopleInQueue.Any())
                 {
-                    Thread.Sleep(2_000);
+                    await Task.Delay(3_000, stoppingToken);
                     continue;
                 }
-
-                db = pool.Connection.GetDatabase();
 
                 connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
                 await connection.OpenAsync(stoppingToken);
 
                 await using var batch = new NpgsqlBatch(connection);
 
-                for (int i = 0; i < peopleInQueue.Count(); i++)
+                for (int i = 0; i < peopleInQueue.Count; i++)
                 {
-                    var response = peopleInQueue.ElementAt(i);
+                    var response = peopleInQueue[i];
                     var cmd = new NpgsqlBatchCommand("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
                     cmd.Parameters.AddWithValue(response.Id);
                     cmd.Parameters.AddWithValue(response.Apelido);
@@ -58,7 +51,7 @@ public class QueueConsumerHostedService : BackgroundService
                     batch.BatchCommands.Add(cmd);
                 }
 
-                _ = batch.ExecuteNonQueryAsync(stoppingToken);
+                await batch.ExecuteNonQueryAsync(stoppingToken);
             }
             catch (NpgsqlException ex)
             {

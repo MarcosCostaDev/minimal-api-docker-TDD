@@ -1,5 +1,4 @@
 ﻿using RinhaBackEnd.Dtos.Response;
-using System.Collections.Concurrent;
 
 namespace RinhaBackEnd.Extensions
 {
@@ -13,6 +12,8 @@ namespace RinhaBackEnd.Extensions
                 itemsReleased++;
                 yield return response!;
             }
+
+            yield break;
         }
     }
 }

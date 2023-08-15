@@ -1,17 +1,13 @@
-using RinhaBackEnd;
+using Microsoft.AspNetCore.Mvc;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
-using System.Collections.Concurrent;
+using System.Text;
+using static System.Net.WebRequestMethods;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.WebHost.ConfigureKestrel(serverOptions =>
-{
-    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
-});
 
 builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
 
@@ -34,7 +30,7 @@ app.MapGet("/ping", () => "pong");
 app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
                                [FromServices] NpgsqlConnection connection,
                                [FromServices] IConnectionMultiplexerPool redis,
-                               ConcurrentQueue<PersonResponse> apelidosUsados) =>
+                               [FromServices] ConcurrentQueue<PersonResponse> peopleToBeInserted) =>
 {
     if (request == null) return Results.UnprocessableEntity(request);
 
@@ -50,20 +46,18 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
 
-
-
     var result = person.ToPersonResponse();
 
-   // var responseJson = result.ToJson();
+    peopleToBeInserted.Enqueue(result);
 
-    await db.StringSetAsync($"personApelido:{person.Apelido}", ".");
+    var jsonResult = result.ToJson();
+    await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[]
+    {
+        new($"personApelido:{person.Apelido}", "."),
+        new($"personId:{person.Id}", jsonResult)
+    });
 
     _ = db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
-
-    apelidosUsados.Enqueue(result);
-   // _ = db.KeyExpireAsync($"personId:{person.Id}", TimeSpan.FromMinutes(6));
-
-    //  await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
 
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
