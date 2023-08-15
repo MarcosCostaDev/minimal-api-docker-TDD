@@ -1,6 +1,5 @@
 ﻿using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
-using System.Collections.Concurrent;
 
 namespace RinhaBackEnd.HostedServices;
 
@@ -23,17 +22,21 @@ public class QueueConsumerHostedService : BackgroundService
         var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexerPool>();
         var pool = await redis.GetAsync();
         var db = pool.Connection.GetDatabase();
-        var queue = scope.ServiceProvider.GetRequiredService<ConcurrentQueue<PersonResponse>>();
+
+        if (!(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
+        {
+            await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            Thread.Sleep(1_000);
-            NpgsqlConnection connection = null;
             try
             {
-                var peopleInQueue = queue.Dequeue(20);
+                Thread.Sleep(1_000);
 
-                if (!peopleInQueue.Any())
+                var streamResult = await db.StreamReadGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, consumerId, count: 10);
+
+                if (!streamResult.Any())
                 {
                     Thread.Sleep(2_000);
                     continue;
@@ -41,24 +44,23 @@ public class QueueConsumerHostedService : BackgroundService
 
                 db = pool.Connection.GetDatabase();
 
-                connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
-                await connection.OpenAsync(stoppingToken);
+                var insertItems = streamResult.Select(item => {
+                    var response = item[EnvConsts.StreamPersonKey].ToString().DeserializeTo<PersonResponse>();
+                    return new
+                    {
+                        response.Id,
+                        response.Apelido,
+                        response.Nome,
+                        response.Nascimento,
+                        Stack = response.GetStack(),
+                    };
+                });
 
-                await using var batch = new NpgsqlBatch(connection);
+                var connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
 
-                for (int i = 0; i < peopleInQueue.Count(); i++)
-                {
-                    var response = peopleInQueue.ElementAt(i);
-                    var cmd = new NpgsqlBatchCommand("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
-                    cmd.Parameters.AddWithValue(response.Id);
-                    cmd.Parameters.AddWithValue(response.Apelido);
-                    cmd.Parameters.AddWithValue(response.Nome);
-                    cmd.Parameters.AddWithValue(response.Nascimento);
-                    cmd.Parameters.AddWithValue(response.GetStack());
-                    batch.BatchCommands.Add(cmd);
-                }
+                await connection.ExecuteAsync("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES (@ID, @APELIDO, @NOME, @NASCIMENTO, @STACK)", insertItems, commandType: System.Data.CommandType.Text);
 
-                _ = batch.ExecuteNonQueryAsync(stoppingToken);
+                await db.StreamAcknowledgeAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, streamResult.Select(p => p.Id).ToArray());
             }
             catch (NpgsqlException ex)
             {
@@ -68,15 +70,10 @@ public class QueueConsumerHostedService : BackgroundService
             {
                 _logger.LogError(ex, "Error on Redis");
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 _logger.LogError(ex, "WTF WAS THIS?!");
             }
-            finally
-            {
-                connection?.Close();
-            }
         }
     }
-
 }
