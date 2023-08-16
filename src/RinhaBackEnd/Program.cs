@@ -1,15 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
-using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
-using System.Text;
-using static System.Net.WebRequestMethods;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
+builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection")!, ServiceLifetime.Scoped);
 
 builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 {
@@ -34,7 +30,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 {
     if (request == null) return Results.UnprocessableEntity(request);
 
-    var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
+    var person = new Person(request.Apelido!, request.Nome!, request.Nascimento!, request.Stack);
 
     if (!person.IsValid()) return Results.UnprocessableEntity(request);
 
@@ -50,14 +46,9 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     peopleToBeInserted.Enqueue(result);
 
-    var jsonResult = result.ToJson();
-    await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[]
-    {
-        new($"personApelido:{person.Apelido}", "."),
-        new($"personId:{person.Id}", jsonResult)
-    });
+    var jsonResult = result.ToString();
 
-    _ = db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
+    await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
@@ -68,14 +59,6 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
 {
     if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
 
-    var pool = await redis.GetAsync();
-
-    var db = pool.Connection.GetDatabase();
-
-    var result = await db.StringGetAsync($"personId:{id}");
-
-    if (result.HasValue) return Results.Text(result, contentType: "application/json");
-
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
@@ -84,10 +67,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                                                     ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
-    if (queryResult == null) return Results.NotFound();
-
-    await db.StringSetAsync($"personId:{id}", queryResult.ToJson());
-
+    if (queryResult == null) Results.NotFound();
     return Results.Ok(queryResult);
 });
 
@@ -112,7 +92,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
 
 app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
-    return Results.Ok(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PEOPLE"));
+    return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PEOPLE"));
 });
 
 if (app.Environment.IsDevelopment())
@@ -120,18 +100,14 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.Use(next => context =>
-{
-    context.Request.EnableBuffering();
-    return next(context);
-});
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
-    exceptionHandlerApp.Run(async context =>
+    exceptionHandlerApp.Run(context =>
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         context.Response.ContentType = context.Request.ContentType;
         context.Response.Body = context.Request.Body;
+        return Task.CompletedTask;
     });
 });
 
