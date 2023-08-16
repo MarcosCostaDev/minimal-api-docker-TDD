@@ -67,6 +67,6 @@ public class ContainerFixture : IIntegrationTest, IDisposable
         else
             System.Diagnostics.Process.Start("bash", "docker-compose rm -f & docker-compose down");
 
-        Thread.Sleep(5_000);
+        await Task.Delay(TimeSpan.FromSeconds(5));
     }
 }

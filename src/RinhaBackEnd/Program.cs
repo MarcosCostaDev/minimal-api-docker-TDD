@@ -54,8 +54,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
-                                        [FromServices] NpgsqlConnection connection,
-                                        [FromServices] IConnectionMultiplexerPool redis) =>
+                                        [FromServices] NpgsqlConnection connection) =>
 {
     if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
 
@@ -67,7 +66,8 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                                                     ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
-    if (queryResult == null) Results.NotFound();
+    if (queryResult == null) return Results.NotFound();
+
     return Results.Ok(queryResult);
 });
 
