@@ -15,7 +15,7 @@ public class PersonResponse
     [JsonIgnore]
     private string? _stack { get; set; }
 
-    [JsonPropertyName("stack")]
+    [JsonPropertyName("Stack")]
     public IEnumerable<string>? Stacks
     {
         get
@@ -32,6 +32,8 @@ public class PersonResponse
     {
         return string.IsNullOrWhiteSpace(_stack) ? Enumerable.Empty<string>() : _stack.DeserializeTo<IEnumerable<string>>();
     }
+
+    public override string ToString() => $@"{{""{nameof(Id)}"": ""{Id}"",""{nameof(Apelido)}"": ""{Apelido}"",""{nameof(Nome)}"": ""{Nome}"",""{nameof(Nascimento)}"": ""{Nascimento:yyyy-MM-dd}"",""Stack"": {_stack}}}";
 }
 
 

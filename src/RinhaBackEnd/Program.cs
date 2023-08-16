@@ -1,3 +1,4 @@
+using RinhaBackEnd;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
@@ -25,8 +26,9 @@ builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 
 builder.Services.AddSingleton(options => new ConcurrentQueue<PersonResponse>());
 
-builder.Services.AddSingleton(options => new ConcurrentDictionary<string, PersonResponse>());
+builder.Services.AddSingleton(options => new ConcurrentDictionary<Guid, PersonResponse>());
 
+builder.Services.AddHostedService<SavingCacheHostedService>();
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
 var app = builder.Build();
@@ -48,6 +50,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     var db = pool.Connection.GetDatabase();
 
+
     var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
 
     if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
@@ -56,31 +59,36 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     peopleToBeInserted.Enqueue(result);
 
-    var jsonResult = result.ToJson();
-    await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[]
-    {
-        new($"personApelido:{person.Apelido}", "."),
-        new($"personId:{person.Id}", jsonResult)
-    });
+    var jsonResult = result.ToString();
 
-    _ = db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
+    var sub = pool.Connection.GetSubscriber();
+
+    await sub.PublishAsync(EnvConsts.StreamName, jsonResult);
+
+    await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                         [FromServices] NpgsqlConnection connection,
-                                        [FromServices] IConnectionMultiplexerPool redis) =>
+                                        [FromServices] IConnectionMultiplexerPool redis,
+                                        [FromServices] ConcurrentDictionary<Guid, PersonResponse> dictionary
+                                        ) =>
 {
     if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
 
-    var pool = await redis.GetAsync();
 
-    var db = pool.Connection.GetDatabase();
+    var attempt = 0;
+    do
+    {
+        await Task.Delay(1_000);
+        if (dictionary.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
 
-    var result = await db.StringGetAsync($"personId:{id}");
+        attempt++;
+        await Task.Delay(1_000);
 
-    if (result.HasValue) return Results.Text(result, contentType: "application/json");
+    } while (attempt < 1);
 
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
@@ -90,10 +98,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                                                     ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
-    if (queryResult == null) return Results.NotFound();
-
-    await db.StringSetAsync($"personId:{id}", queryResult.ToJson());
-
+    if (queryResult == null) Results.NotFound();
     return Results.Ok(queryResult);
 });
 
