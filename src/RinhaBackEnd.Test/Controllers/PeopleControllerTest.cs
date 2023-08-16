@@ -1,5 +1,4 @@
 ﻿using RinhaBackEnd.Test.Interfaces;
-using System.Runtime.InteropServices;
 
 namespace RinhaBackEnd.Test.Controllers;
 
@@ -27,7 +26,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
     }
 
-    [Benchmark(Description = nameof(HealthShouldBeSuccess))]
     [Fact(Timeout = 10_000)]
     public async Task HealthShouldBeSuccess()
     {
@@ -40,7 +38,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Should().Be("pong");
     }
 
-    [Benchmark(Description = nameof(CreatePersonShouldBeSuccess))]
     [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldBeSuccess()
     {
@@ -66,7 +63,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stacks.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(CreateRepeatedPersonShouldFail422))]
     [Fact(Timeout = 10_000)]
     public async Task CreateRepeatedPersonShouldFail422()
     {
@@ -94,7 +90,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stacks.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(CreatePersonShouldFailStatus422))]
     [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldFailStatus422()
     {
@@ -119,7 +114,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stack.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(GetPersonShouldBeSuccess))]
     [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeSuccess()
     {
@@ -148,7 +142,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stacks.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(GetPersonShouldBeFail404))]
     [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeFail404()
     {
@@ -157,7 +150,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 
-    [Benchmark(Description = nameof(QueryPersonShouldFind1))]
     [Fact(Timeout = 10_000)]
     public async Task QueryPersonShouldFind1()
     {
@@ -188,7 +180,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Should().HaveCount(1);
     }
 
-    [Benchmark(Description = nameof(QueryPersonShouldFind0))]
     [Fact(Timeout = 10_000)]
     public async Task QueryPersonShouldFind0()
     {
@@ -221,7 +212,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Should().HaveCount(0);
     }
 
-    [Benchmark(Description = nameof(CountPersonShouldBe3))]
     [Fact(Timeout = 15_000)]
     public async Task CountPersonShouldBe3()
     {
