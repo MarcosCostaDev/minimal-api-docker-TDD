@@ -54,7 +54,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonResponse>();
+        var sut = responseText.DeserializeTo<PersonResponse>(true);
 
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
@@ -77,17 +77,19 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var response1 = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
         response1.EnsureSuccessStatusCode();
 
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
         var response2 = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
 
         var responseText = await response2.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonResponse>();
+        var sut = responseText.DeserializeTo<PersonRequest>(true);
 
         response2.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
-        sut.Stacks.Should().Contain(request.Stack);
+        sut.Nascimento.Should().Be(request.Nascimento);
+        sut.Stack.Should().Contain(request.Stack);
     }
 
     [Fact(Timeout = 10_000)]
@@ -105,7 +107,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonRequest>();
+        var sut = responseText.DeserializeTo<PersonRequest>(true);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
@@ -128,12 +130,14 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
         createReponse.EnsureSuccessStatusCode();
 
+        await Task.Delay(TimeSpan.FromSeconds(3));
+
         var response = await _fixture.Client.GetAsync(createReponse.Headers.Location.ToString());
         response.EnsureSuccessStatusCode();
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonResponse>();
+        var sut = responseText.DeserializeTo<PersonResponse>(true);
 
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
@@ -169,13 +173,14 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
             index++;
         }
-        Thread.Sleep(2_000);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+
         var response = await _fixture.Client.GetAsync("/pessoas?t=Java");
         response.EnsureSuccessStatusCode();
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
+        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>(true);
 
         sut.Should().HaveCount(1);
     }
@@ -200,14 +205,14 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
             index++;
         }
 
-        Thread.Sleep(2_000);
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         var response = await _fixture.Client.GetAsync("/pessoas?t=Cobol");
         response.EnsureSuccessStatusCode();
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
+        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>(true);
 
         sut.Should().HaveCount(0);
     }
@@ -228,11 +233,11 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
-
+            await Task.Delay(TimeSpan.FromSeconds(2));
             index++;
         }
 
-        Thread.Sleep(2_000);
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         var response = await _fixture.Client.GetAsync("/contagem-pessoas");
         response.EnsureSuccessStatusCode();
