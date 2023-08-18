@@ -2,6 +2,8 @@ using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.HostedServices;
+using StackExchange.Redis;
+using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,9 +17,13 @@ builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
                 connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
 });
 
-builder.Services.AddSingleton(options => new ConcurrentQueue<PersonResponse>());
+builder.Services.AddSingleton(_ => new ConcurrentQueue<PersonResponse>());
 
+builder.Services.AddSingleton(_ => new ConcurrentDictionary<Guid, PersonResponse>());
+
+builder.Services.AddHostedService<SyncRecordHostedService>();
 builder.Services.AddHostedService<QueueConsumerHostedService>();
+
 
 var app = builder.Build();
 
@@ -26,6 +32,7 @@ app.MapGet("/ping", () => "pong");
 app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
                                [FromServices] NpgsqlConnection connection,
                                [FromServices] IConnectionMultiplexerPool redis,
+                               [FromServices] ConcurrentDictionary<Guid, PersonResponse> localRecords,
                                [FromServices] ConcurrentQueue<PersonResponse> peopleToBeInserted) =>
 {
     if (request == null) return Results.UnprocessableEntity(request);
@@ -37,6 +44,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
     var pool = await redis.GetAsync();
 
     var db = pool.Connection.GetDatabase();
+    var sub = pool.Connection.GetSubscriber();
 
     var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
 
@@ -50,13 +58,26 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
+    localRecords.TryAdd(result.Id, result);
+
+    await sub.PublishAsync("added-record", jsonResult);
+
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
-                                        [FromServices] NpgsqlConnection connection) =>
+                                        [FromServices] NpgsqlConnection connection,
+                                        [FromServices] ConcurrentDictionary<Guid, PersonResponse> localRecords) =>
 {
     if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
+
+    var attempt = 0;
+    do
+    {
+        if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
+        attempt++;
+        await Task.Delay(1_500);
+    } while (attempt < 4);
 
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
