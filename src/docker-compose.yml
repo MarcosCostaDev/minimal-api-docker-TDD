@@ -7,6 +7,8 @@ services:
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
       - redis
@@ -24,6 +26,8 @@ services:
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
       - redis
@@ -41,7 +45,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.3'
+          cpus: '0.35'
           memory: '1.3GB'
     ports:
        - 5432:5432
@@ -60,7 +64,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'
+          cpus: '0.2'
           memory: '0.2GB'
   proxy:
     container_name: proxy

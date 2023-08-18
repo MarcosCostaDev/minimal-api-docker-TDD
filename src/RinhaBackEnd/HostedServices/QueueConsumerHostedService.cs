@@ -23,13 +23,13 @@ public class QueueConsumerHostedService : BackgroundService
 
             if (!peopleInQueue.Any())
             {
-              //  await Task.Delay(3_000, stoppingToken);
+               await Task.Delay(1_000, stoppingToken);
                 continue;
             }
             NpgsqlConnection connection = null!;
             connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
             await connection.OpenAsync(stoppingToken);
-
+            
             await using var batch = new NpgsqlBatch(connection);
 
             for (int i = 0; i < peopleInQueue.Length; i++)
