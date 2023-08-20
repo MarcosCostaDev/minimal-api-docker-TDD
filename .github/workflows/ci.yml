@@ -9,10 +9,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: ./src
     steps:
       - uses: actions/checkout@master
       - name: Build
-        run: docker build . -t rinha-de-backend-2023-q3
+        run: docker build -t rinha-de-backend-2023-q3 -f RinhaBackEnd/Dockerfile .
   test:
     runs-on: ubuntu-20.04
     needs: build
