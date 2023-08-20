@@ -17,7 +17,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         dockerFixture.InitOnce(() => new DockerFixtureOptions
         {
             DockerComposeFiles = new[] { "docker-compose.yml", "docker-compose.testing.yml" },
-            CustomUpTest = output => output.Any(l => l.Contains("ready for start up") || l.Contains("Attaching to api01, api02, cache, database, proxy")),
+            CustomUpTest = output => output.Any(l => l.Contains("custom up test satisfied")),
             StartupTimeoutSecs = 240,
             DockerComposeUpArgs = "--build"
         });
