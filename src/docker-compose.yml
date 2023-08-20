@@ -7,34 +7,38 @@ services:
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
       - redis
     ports:
       - "80"
+    restart: always
     deploy:
       resources:
         limits:
-          cpus: '0.25'
-          memory: '0.5GB'
-    restart: always
+          cpus: '0.3'
+          memory: '0.65GB'
   api02:
     container_name: api02
     image: rinhabackend
     build:
       context: .
       dockerfile: RinhaBackEnd/Dockerfile
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
       - redis
     ports:
       - "80"
+    restart: always
     deploy:
       resources:
         limits:
-          cpus: '0.25'
-          memory: '0.5GB'
-    restart: always
+          cpus: '0.3'
+          memory: '0.65GB'
   db:
     container_name: database
     image: 'postgres:latest'
@@ -42,7 +46,7 @@ services:
       resources:
         limits:
           cpus: '0.55'
-          memory: '1.7GB'
+          memory: '1.3GB'
     ports:
        - 5432:5432
     environment:
@@ -57,10 +61,11 @@ services:
     container_name: cache
     ports:
       - "6379:6379"
+    command: redis-server --save "" --appendonly no
     deploy:
       resources:
         limits:
-          cpus: '0.3'
+          cpus: '0.1'
           memory: '0.2GB'
   proxy:
     container_name: proxy
@@ -75,5 +80,5 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.15'
-          memory: '0.1GB'
+          cpus: '0.25'
+          memory: '0.2GB'

@@ -32,4 +32,4 @@ jobs:
     - name: Build
       run: dotnet build ${{env.SOLUTION}} --no-restore
     - name: Test
-      run: dotnet test ${{env.SOLUTION}} --filter 'Integration!=ignore&Integration!=Benchmark' --no-build --verbosity normal
+      run: dotnet test ${{env.SOLUTION}} --no-build --verbosity normal

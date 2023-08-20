@@ -26,11 +26,6 @@ public class Person
     public string Apelido { get; private set; }
     public string Nome { get; private set; }
     public DateTime? Nascimento { get; private set; }
-    public string Stacks
-    {
-        get { return Stack.ToJson(); }
-        set { Stack = value.DeserializeTo<IEnumerable<string>>(); }
-    }
     public IEnumerable<string> Stack { get; set; }
 
     public bool IsValid()
@@ -51,7 +46,7 @@ public class Person
             Id = Id,
             Apelido = Apelido,
             Nome = Nome,
-            Stacks = Stack,
+            Stack = Stack.ToArray(),
             Nascimento = Nascimento.GetValueOrDefault()
         };
     }

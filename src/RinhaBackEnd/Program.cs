@@ -1,102 +1,95 @@
-using RinhaBackEnd;
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
+using StackExchange.Redis;
+using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection"), ServiceLifetime.Scoped);
-
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-});
+builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("PeopleDbConnection")!, ServiceLifetime.Scoped);
 
 builder.Services.AddSingleton<IConnectionMultiplexerPool>(options =>
 {
     return ConnectionMultiplexerPoolFactory.Create(
-                poolSize: 100,
+                poolSize: 50,
                 configuration: builder.Configuration.GetConnectionString("RedisConnection"),
                 connectionSelectionStrategy: ConnectionSelectionStrategy.RoundRobin);
 });
 
+builder.Services.AddSingleton(_ => new ConcurrentQueue<PersonResponse>());
+
+builder.Services.AddSingleton(_ => new ConcurrentDictionary<Guid, PersonResponse>());
+
+builder.Services.AddHostedService<SyncRecordHostedService>();
 builder.Services.AddHostedService<QueueConsumerHostedService>();
 
-var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+var app = builder.Build();
 
 app.MapGet("/ping", () => "pong");
 
 app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
                                [FromServices] NpgsqlConnection connection,
-                               [FromServices] IConnectionMultiplexerPool redis) =>
+                               [FromServices] IConnectionMultiplexerPool redis,
+                               [FromServices] ConcurrentDictionary<Guid, PersonResponse> localRecords,
+                               [FromServices] ConcurrentQueue<PersonResponse> peopleToBeInserted) =>
 {
-    if(request == null) return Results.UnprocessableEntity(request);;
+    if (request == null) return Results.UnprocessableEntity(request);
 
-    var person = new Person(request.Apelido, request.Nome, request.Nascimento, request.Stack);
+    var person = new Person(request.Apelido!, request.Nome!, request.Nascimento!, request.Stack);
 
     if (!person.IsValid()) return Results.UnprocessableEntity(request);
 
+    var pool = await redis.GetAsync();
+
+    var db = pool.Connection.GetDatabase();
+    var sub = pool.Connection.GetSubscriber();
+
+    var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
+
+    if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
+
     var result = person.ToPersonResponse();
-    try
-    {
-        var pool = await redis.GetAsync();
-        var db = pool.Connection.GetDatabase();
 
-        var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
+    peopleToBeInserted.Enqueue(result);
 
-        if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
+    var jsonResult = result.ToJson();
 
-        var responseJson = person.ToPersonResponse().ToJson();
+    await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
-        await db.StringSetAsync(new KeyValuePair<RedisKey, RedisValue>[] {
-            new($"personApelido:{person.Apelido}", "."),
-            new($"personId:{person.Id}", responseJson)
-        });
+    //localRecords.TryAdd(result.Id, result);
 
-        await db.KeyExpireAsync($"personApelido:{person.Apelido}", TimeSpan.FromMinutes(10));
-        await db.KeyExpireAsync($"personId:{person.Id}", TimeSpan.FromMinutes(6));
+    await sub.PublishAsync("added-record", jsonResult);
 
-        await db.StreamAddAsync(EnvConsts.StreamName, new NameValueEntry[] { new(EnvConsts.StreamPersonKey, responseJson) });
-    }
-    catch (Exception ex)
-    {
-        return Results.UnprocessableEntity(request);
-    }
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
 
 app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                         [FromServices] NpgsqlConnection connection,
-                                        [FromServices] IConnectionMultiplexerPool redis) =>
+                                        [FromServices] ConcurrentDictionary<Guid, PersonResponse> localRecords) =>
 {
     if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
 
-    var pool = await redis.GetAsync();
+    var attempt = 0;
+    
+    do
+    {
+        if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
+        attempt++;
+        await Task.Delay(500);
+    } while (attempt < 2);
 
-    var db = pool.Connection.GetDatabase();
-
-    var result = await db.StringGetAsync($"personId:{id}");
-
-    if (result.HasValue) return Results.Text(result, contentType: "application/json");
-
-    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
+    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
-                                                                    PEOPLE 
+                                                                    PESSOA 
                                                                 WHERE 
-                                                                    ID = @ID", new { id }, 
+                                                                    ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
     if (queryResult == null) return Results.NotFound();
-
-    await db.StringSetAsync($"personId:{id}", queryResult.ToJson());
 
     return Results.Ok(queryResult);
 });
@@ -108,11 +101,9 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
     var query = @"SELECT
                       ID, APELIDO, NOME, NASCIMENTO, STACK 
                   FROM 
-                      PEOPLE 
+                      PESSOA 
                   WHERE 
-                      APELIDO LIKE @SEARCH
-                      OR NOME LIKE @SEARCH
-                      OR STACK LIKE @SEARCH
+                      BUSCA ILIKE '%' || @search || '%'
                       limit 50;";
 
     var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
@@ -122,7 +113,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
 
 app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
-    return Results.Ok(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PEOPLE"));
+    return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PEOPLE"));
 });
 
 if (app.Environment.IsDevelopment())
@@ -130,18 +121,14 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.Use(next => context =>
-{
-    context.Request.EnableBuffering();
-    return next(context);
-});
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
-    exceptionHandlerApp.Run(async context =>
+    exceptionHandlerApp.Run(context =>
     {
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         context.Response.ContentType = context.Request.ContentType;
         context.Response.Body = context.Request.Body;
+        return Task.CompletedTask;
     });
 });
 

@@ -6,74 +6,45 @@ namespace RinhaBackEnd.HostedServices;
 public class QueueConsumerHostedService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<QueueConsumerHostedService> _logger;
 
-    public QueueConsumerHostedService(IServiceProvider serviceProvider, ILogger<QueueConsumerHostedService> logger)
+    public QueueConsumerHostedService(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
-        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        string consumerId = Guid.NewGuid().ToString()[..5];
         using var scope = _serviceProvider.CreateScope();
-
-        var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexerPool>();
-        var pool = await redis.GetAsync();
-        var db = pool.Connection.GetDatabase();
-
-        if (!(await db.KeyExistsAsync(EnvConsts.StreamName)) || (await db.StreamGroupInfoAsync(EnvConsts.StreamName)).All(x => x.Name != EnvConsts.StreamGroupName))
-        {
-            await db.StreamCreateConsumerGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, "0-0", true);
-        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            try
+            var queue = _serviceProvider.GetRequiredService<ConcurrentQueue<PersonResponse>>();
+            var peopleInQueue = queue.Dequeue(100).ToArray();
+
+            if (!peopleInQueue.Any())
             {
-                Thread.Sleep(1_000);
-
-                var streamResult = await db.StreamReadGroupAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, consumerId, count: 10);
-
-                if (!streamResult.Any())
-                {
-                    Thread.Sleep(2_000);
-                    continue;
-                }
-
-                db = pool.Connection.GetDatabase();
-
-                var insertItems = streamResult.Select(item => {
-                    var response = item[EnvConsts.StreamPersonKey].ToString().DeserializeTo<PersonResponse>();
-                    return new
-                    {
-                        response.Id,
-                        response.Apelido,
-                        response.Nome,
-                        response.Nascimento,
-                        Stack = response.GetStack(),
-                    };
-                });
-
-                var connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
-
-                await connection.ExecuteAsync("INSERT INTO PEOPLE (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES (@ID, @APELIDO, @NOME, @NASCIMENTO, @STACK)", insertItems, commandType: System.Data.CommandType.Text);
-
-                await db.StreamAcknowledgeAsync(EnvConsts.StreamName, EnvConsts.StreamGroupName, streamResult.Select(p => p.Id).ToArray());
+               await Task.Delay(200, stoppingToken);
+                continue;
             }
-            catch (NpgsqlException ex)
+            NpgsqlConnection connection = null!;
+            connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
+            await connection.OpenAsync(stoppingToken);
+            
+            await using var batch = new NpgsqlBatch(connection);
+
+            for (int i = 0; i < peopleInQueue.Length; i++)
             {
-                _logger.LogError(ex, "Error on Postgres");
+                var cmd = new NpgsqlBatchCommand("INSERT INTO PESSOA (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
+                cmd.Parameters.AddWithValue(peopleInQueue[i].Id);
+                cmd.Parameters.AddWithValue(peopleInQueue[i].Apelido);
+                cmd.Parameters.AddWithValue(peopleInQueue[i].Nome);
+                cmd.Parameters.AddWithValue(peopleInQueue[i].Nascimento);
+                cmd.Parameters.AddWithValue(peopleInQueue[i].Stack);
+                batch.BatchCommands.Add(cmd);
             }
-            catch (RedisException ex)
-            {
-                _logger.LogError(ex, "Error on Redis");
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError(ex, "WTF WAS THIS?!");
-            }
+
+            await batch.ExecuteNonQueryAsync(stoppingToken);
+            connection?.Close();
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using RinhaBackEnd.Test.Interfaces;
-using System.Runtime.InteropServices;
 
 namespace RinhaBackEnd.Test.Controllers;
 
@@ -27,7 +26,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
     }
 
-    [Benchmark(Description = nameof(HealthShouldBeSuccess))]
     [Fact(Timeout = 10_000)]
     public async Task HealthShouldBeSuccess()
     {
@@ -40,7 +38,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Should().Be("pong");
     }
 
-    [Benchmark(Description = nameof(CreatePersonShouldBeSuccess))]
     [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldBeSuccess()
     {
@@ -57,7 +54,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonResponse>();
+        var sut = responseText.DeserializeTo<PersonResponse>(true);
 
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
@@ -66,7 +63,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stacks.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(CreateRepeatedPersonShouldFail422))]
     [Fact(Timeout = 10_000)]
     public async Task CreateRepeatedPersonShouldFail422()
     {
@@ -81,20 +77,21 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var response1 = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
         response1.EnsureSuccessStatusCode();
 
+        await Task.Delay(TimeSpan.FromSeconds(5));
+
         var response2 = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
 
         var responseText = await response2.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonResponse>();
+        var sut = responseText.DeserializeTo<PersonRequest>(true);
 
         response2.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
-        sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
-        sut.Stacks.Should().Contain(request.Stack);
+        sut.Nascimento.Should().Be(request.Nascimento);
+        sut.Stack.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(CreatePersonShouldFailStatus422))]
     [Fact(Timeout = 10_000)]
     public async Task CreatePersonShouldFailStatus422()
     {
@@ -110,7 +107,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonRequest>();
+        var sut = responseText.DeserializeTo<PersonRequest>(true);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.UnprocessableEntity);
         sut.Nome.Should().Be(request.Nome);
@@ -119,7 +116,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stack.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(GetPersonShouldBeSuccess))]
     [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeSuccess()
     {
@@ -134,12 +130,14 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
         createReponse.EnsureSuccessStatusCode();
 
+        await Task.Delay(TimeSpan.FromSeconds(3));
+
         var response = await _fixture.Client.GetAsync(createReponse.Headers.Location.ToString());
         response.EnsureSuccessStatusCode();
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<PersonResponse>();
+        var sut = responseText.DeserializeTo<PersonResponse>(true);
 
         sut.Id.Should().NotBeEmpty();
         sut.Nome.Should().Be(request.Nome);
@@ -148,7 +146,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Stacks.Should().Contain(request.Stack);
     }
 
-    [Benchmark(Description = nameof(GetPersonShouldBeFail404))]
     [Fact(Timeout = 10_000)]
     public async Task GetPersonShouldBeFail404()
     {
@@ -157,7 +154,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 
-    [Benchmark(Description = nameof(QueryPersonShouldFind1))]
     [Fact(Timeout = 10_000)]
     public async Task QueryPersonShouldFind1()
     {
@@ -177,18 +173,18 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
             index++;
         }
-        Thread.Sleep(2_000);
+        await Task.Delay(TimeSpan.FromSeconds(4));
+
         var response = await _fixture.Client.GetAsync("/pessoas?t=Java");
         response.EnsureSuccessStatusCode();
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
+        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>(true);
 
         sut.Should().HaveCount(1);
     }
 
-    [Benchmark(Description = nameof(QueryPersonShouldFind0))]
     [Fact(Timeout = 10_000)]
     public async Task QueryPersonShouldFind0()
     {
@@ -209,19 +205,18 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
             index++;
         }
 
-        Thread.Sleep(2_000);
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         var response = await _fixture.Client.GetAsync("/pessoas?t=Cobol");
         response.EnsureSuccessStatusCode();
 
         var responseText = await response.Content.ReadAsStringAsync();
 
-        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>();
+        var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>(true);
 
         sut.Should().HaveCount(0);
     }
 
-    [Benchmark(Description = nameof(CountPersonShouldBe3))]
     [Fact(Timeout = 15_000)]
     public async Task CountPersonShouldBe3()
     {
@@ -238,11 +233,11 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
-
+            await Task.Delay(TimeSpan.FromSeconds(2));
             index++;
         }
 
-        Thread.Sleep(2_000);
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         var response = await _fixture.Client.GetAsync("/contagem-pessoas");
         response.EnsureSuccessStatusCode();

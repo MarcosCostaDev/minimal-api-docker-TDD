@@ -1,6 +1,4 @@
-﻿global using BenchmarkDotNet.Attributes;
-global using BenchmarkDotNet.Engines;
-global using Dapper;
+﻿global using Dapper;
 global using DockerComposeFixture;
 global using FluentAssertions;
 global using Microsoft.Extensions.Configuration;
@@ -14,4 +12,3 @@ global using System.Linq;
 global using System.Threading.Tasks;
 global using Xunit;
 global using Xunit.Abstractions;
-global using Xunit.Sdk;
