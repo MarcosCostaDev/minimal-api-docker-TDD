@@ -1,6 +1,7 @@
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
+using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
@@ -54,7 +55,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     peopleToBeInserted.Enqueue(result);
 
-    var jsonResult = result.ToString();
+    var jsonResult = result.ToJson();
 
     await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
@@ -79,12 +80,12 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
         await Task.Delay(1_500);
     } while (attempt < 4);
 
-    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
+    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
-                                                                    PEOPLE 
+                                                                    PESSOA 
                                                                 WHERE 
-                                                                    ID = @ID:uuid", new { id },
+                                                                    ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
     if (queryResult == null) return Results.NotFound();
@@ -99,11 +100,9 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
     var query = @"SELECT
                       ID, APELIDO, NOME, NASCIMENTO, STACK 
                   FROM 
-                      PEOPLE 
+                      PESSOA 
                   WHERE 
-                      APELIDO LIKE @SEARCH
-                      OR NOME LIKE @SEARCH
-                      OR STACK LIKE @SEARCH
+                      BUSCA ILIKE '%' || @search || '%'
                       limit 50;";
 
     var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);

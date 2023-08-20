@@ -61,6 +61,7 @@ services:
     container_name: cache
     ports:
       - "6379:6379"
+    command: redis-server --save "" --appendonly no
     deploy:
       resources:
         limits:
