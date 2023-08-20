@@ -18,7 +18,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.35'
+          cpus: '0.3'
           memory: '0.65GB'
   api02:
     container_name: api02
@@ -37,7 +37,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.35'
+          cpus: '0.3'
           memory: '0.65GB'
   db:
     container_name: database
@@ -45,7 +45,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.35'
+          cpus: '0.55'
           memory: '1.3GB'
     ports:
        - 5432:5432
@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
+          cpus: '0.1'
           memory: '0.2GB'
   proxy:
     container_name: proxy
