@@ -5,3 +5,6 @@ CREATE TABLE IF NOT EXISTS PEOPLE (
 	NASCIMENTO DATE NOT NULL,
 	STACK TEXT NULL
 );
+
+CREATE INDEX people_nome_index ON people (NOME);
+CREATE INDEX people_apelido_index ON people (APELIDO);

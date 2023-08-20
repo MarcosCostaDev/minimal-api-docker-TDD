@@ -84,7 +84,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
                                                                 FROM 
                                                                     PEOPLE 
                                                                 WHERE 
-                                                                    ID = @ID", new { id },
+                                                                    ID = @ID:uuid", new { id },
                                                                     commandType: System.Data.CommandType.Text);
 
     if (queryResult == null) return Results.NotFound();
