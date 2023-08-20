@@ -13,7 +13,6 @@
     <None Include="docker-compose.override.yml">
       <DependentUpon>docker-compose.yml</DependentUpon>
     </None>
-    <None Include="docker-compose.production.yml" />
     <None Include="docker-compose.testing.yml" />
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
