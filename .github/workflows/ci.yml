@@ -20,7 +20,7 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@v3
-    - run: docker-compose up -f /src/docker-compose.yml -d
+    - run: docker-compose -f /src/docker-compose.yml up -d
     - name: Load test
       run: |
         git clone --single-branch --quiet https://github.com/zanfranceschi/rinha-de-backend-2023-q3
@@ -39,4 +39,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ${{ github.workspace }}/rinha-de-backend-2023-q3/stress-test/user-files/results/${{ env.GATLING_OUTPUT_FOLDER }}  
         destination_dir: ${{ env.GATLING_OUTPUT_FOLDER }}
-    - run: echo "[Deploying to https://filhodanuvem.github.io/rinha-backend-2023-go/${{ env.GATLING_OUTPUT_FOLDER }}](https://filhodanuvem.github.io/rinha-backend-2023-go/${{ env.GATLING_OUTPUT_FOLDER }})" >> "${GITHUB_STEP_SUMMARY}"
+    - run: echo "[Deploying to https://MarcosCostaDev.github.io/minimal-api-docker-TDD/${{ env.GATLING_OUTPUT_FOLDER }}](https://MarcosCostaDev.github.io/minimal-api-docker-TDD/${{ env.GATLING_OUTPUT_FOLDER }})" >> "${GITHUB_STEP_SUMMARY}"
