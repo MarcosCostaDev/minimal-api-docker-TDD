@@ -59,7 +59,7 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
-    localRecords.TryAdd(result.Id, result);
+    //localRecords.TryAdd(result.Id, result);
 
     await sub.PublishAsync("added-record", jsonResult);
 
@@ -79,7 +79,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
         if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
         attempt++;
         await Task.Delay(500);
-    } while (attempt < 4);
+    } while (attempt < 2);
 
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 

@@ -23,7 +23,7 @@ public class QueueConsumerHostedService : BackgroundService
 
             if (!peopleInQueue.Any())
             {
-               await Task.Delay(100, stoppingToken);
+               await Task.Delay(200, stoppingToken);
                 continue;
             }
             NpgsqlConnection connection = null!;
