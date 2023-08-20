@@ -84,7 +84,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
-                                                                    PESSOA 
+                                                                    PESSOAS 
                                                                 WHERE 
                                                                     ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
@@ -101,7 +101,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
     var query = @"SELECT
                       ID, APELIDO, NOME, NASCIMENTO, STACK 
                   FROM 
-                      PESSOA 
+                      PESSOAS 
                   WHERE 
                       BUSCA ILIKE '%' || @search || '%'
                       limit 50;";
@@ -113,7 +113,7 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
 
 app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
-    return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PEOPLE"));
+    return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PESSOAS"));
 });
 
 if (app.Environment.IsDevelopment())

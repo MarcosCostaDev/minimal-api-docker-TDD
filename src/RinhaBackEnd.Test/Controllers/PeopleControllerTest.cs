@@ -18,12 +18,11 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         {
             DockerComposeFiles = new[] { "docker-compose.yml", "docker-compose.testing.yml" },
             CustomUpTest = output => output.Any(l => l.Contains("ready for start up") || l.Contains("Attaching to api01, api02, cache, database, proxy")),
-            StartupTimeoutSecs = 240
+            StartupTimeoutSecs = 240,
+            DockerComposeUpArgs = "--build"
         });
 
-
         Thread.Sleep(2_400);
-
     }
 
     [Fact(Timeout = 10_000)]
@@ -60,7 +59,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
         sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
-        sut.Stacks.Should().Contain(request.Stack);
+        sut.Stack.Should().Contain(request.Stack.ToArray());
     }
 
     [Fact(Timeout = 10_000)]
@@ -89,7 +88,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
         sut.Nascimento.Should().Be(request.Nascimento);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Stack.Should().Contain(request.Stack.ToArray());
     }
 
     [Fact(Timeout = 10_000)]
@@ -113,7 +112,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
         sut.Nascimento.Should().Be(request.Nascimento);
-        sut.Stack.Should().Contain(request.Stack);
+        sut.Stack.Should().Contain(request.Stack.ToArray());
     }
 
     [Fact(Timeout = 10_000)]
@@ -143,7 +142,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
         sut.Nome.Should().Be(request.Nome);
         sut.Apelido.Should().Be(request.Apelido);
         sut.Nascimento.ToString("yyyy-MM-dd").Should().Be(request.Nascimento);
-        sut.Stacks.Should().Contain(request.Stack);
+        sut.Stack.Should().Contain(request.Stack.ToArray());
     }
 
     [Fact(Timeout = 10_000)]
@@ -155,10 +154,10 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     }
 
     [Fact(Timeout = 10_000)]
-    public async Task QueryPersonShouldFind1()
+    public async Task QueryPersonShouldFind2()
     {
         var index = 0;
-        foreach (var languages in GetLanguages().Take(2))
+        foreach (var languages in GetLanguages().Take(3))
         {
             var request = new PersonRequest
             {
@@ -173,7 +172,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
             index++;
         }
-        await Task.Delay(TimeSpan.FromSeconds(4));
+        await Task.Delay(TimeSpan.FromSeconds(3));
 
         var response = await _fixture.Client.GetAsync("/pessoas?t=Java");
         response.EnsureSuccessStatusCode();
@@ -182,7 +181,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
         var sut = responseText.DeserializeTo<IEnumerable<PersonResponse>>(true);
 
-        sut.Should().HaveCount(1);
+        sut.Should().HaveCount(2);
     }
 
     [Fact(Timeout = 10_000)]
@@ -233,7 +232,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
             var createReponse = await _fixture.Client.PostAsync("/pessoas", request.ToJsonHttpContent());
             createReponse.EnsureSuccessStatusCode();
-            await Task.Delay(TimeSpan.FromSeconds(2));
             index++;
         }
 
@@ -251,7 +249,7 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
     {
         yield return new string[] { "Java", "PHP", "Go" };
         yield return new string[] { "CSharp", "Elixir", };
-        yield return new string[] { "Dart", "Ruby", "Elixir" };
+        yield return new string[] { "Dart", "Ruby", "Javascript" };
         yield return new string[] { "Ruby", "PHP" };
         yield return new string[] { "CSharp" };
         yield return new string[] { "Java" };
@@ -263,7 +261,6 @@ public class PeopleControllerTest : IClassFixture<DockerFixture>, IDisposable
 
     public async Task DisposeAsync(bool dispose)
     {
-        if (!dispose) return;
         await CleanDatabaseAsync();
     }
 
