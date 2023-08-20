@@ -1,6 +1,7 @@
 using RinhaBackEnd.Domain;
 using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
+using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
@@ -54,11 +55,11 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 
     peopleToBeInserted.Enqueue(result);
 
-    var jsonResult = result.ToString();
+    var jsonResult = result.ToJson();
 
     await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
-    localRecords.TryAdd(result.Id, result);
+    //localRecords.TryAdd(result.Id, result);
 
     await sub.PublishAsync("added-record", jsonResult);
 
@@ -72,17 +73,18 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
     if (id == null || Guid.Empty == id.Value) return Results.BadRequest();
 
     var attempt = 0;
+    
     do
     {
         if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
         attempt++;
-        await Task.Delay(1_500);
-    } while (attempt < 4);
+        await Task.Delay(500);
+    } while (attempt < 2);
 
-    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponseQuery>(@"SELECT
+    var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
                                                                     ID, APELIDO, NOME, NASCIMENTO, STACK 
                                                                 FROM 
-                                                                    PEOPLE 
+                                                                    PESSOA 
                                                                 WHERE 
                                                                     ID = @ID", new { id },
                                                                     commandType: System.Data.CommandType.Text);
@@ -99,11 +101,9 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
     var query = @"SELECT
                       ID, APELIDO, NOME, NASCIMENTO, STACK 
                   FROM 
-                      PEOPLE 
+                      PESSOA 
                   WHERE 
-                      APELIDO LIKE @SEARCH
-                      OR NOME LIKE @SEARCH
-                      OR STACK LIKE @SEARCH
+                      BUSCA ILIKE '%' || @search || '%'
                       limit 50;";
 
     var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
