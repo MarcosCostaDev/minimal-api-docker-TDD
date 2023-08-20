@@ -53,11 +53,18 @@ public class ContainerFixture : IIntegrationTest, IDisposable
 
         await connection.ExecuteAsync(@"DO $$
 	                                        BEGIN
-		                                        IF (select Count(1) from information_schema.tables where table_name = 'people') >0 
-		                                        THEN truncate table people;
-		                                        END IF;
+                                                LISTEN msg;                                                
+                                                NOTIFY msg, 'TRUNCATE PROCESS START';
+		                                            IF (select Count(1) from information_schema.tables where table_name = 'pessoas') >0 
+		                                            THEN 
+                                                        TRUNCATE TABLE PESSOAS;
+                                                        NOTIFY MSG, 'TRUNCATE EXECUTED';
+		                                            END IF;
+                                                NOTIFY msg, 'TRUNCATE PROCESS FINISH';
+                                                UNLISTEN msg;
 	                                        END;
 	                                    $$");
+       
     }
 
     public async Task DownDockerComposeAsync()

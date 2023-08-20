@@ -34,7 +34,7 @@ public class QueueConsumerHostedService : BackgroundService
 
             for (int i = 0; i < peopleInQueue.Length; i++)
             {
-                var cmd = new NpgsqlBatchCommand("INSERT INTO PESSOA (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
+                var cmd = new NpgsqlBatchCommand("INSERT INTO PESSOAS (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
                 cmd.Parameters.AddWithValue(peopleInQueue[i].Id);
                 cmd.Parameters.AddWithValue(peopleInQueue[i].Apelido);
                 cmd.Parameters.AddWithValue(peopleInQueue[i].Nome);

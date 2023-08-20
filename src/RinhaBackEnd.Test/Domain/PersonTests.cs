@@ -43,8 +43,7 @@ public class PersonTests
         result.Id.Should().Be(person.Id);
         result.Apelido.Should().Be(person.Apelido);
         result.Nome.Should().Be(person.Nome);
-        result.Stacks.Should().BeEquivalentTo(person.Stack);
+        result.Stack.Should().BeEquivalentTo(person.Stack);
         result.Nascimento.Should().Be(person.Nascimento.GetValueOrDefault());
     }
-
 }
