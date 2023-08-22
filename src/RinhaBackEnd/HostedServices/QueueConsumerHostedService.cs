@@ -27,24 +27,33 @@ public class QueueConsumerHostedService : BackgroundService
                 continue;
             }
             NpgsqlConnection connection = null!;
-            connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
-            await connection.OpenAsync(stoppingToken);
-            
-            await using var batch = new NpgsqlBatch(connection);
-
-            for (int i = 0; i < peopleInQueue.Length; i++)
+            try
             {
-                var cmd = new NpgsqlBatchCommand("INSERT INTO PESSOAS (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
-                cmd.Parameters.AddWithValue(peopleInQueue[i].Id);
-                cmd.Parameters.AddWithValue(peopleInQueue[i].Apelido);
-                cmd.Parameters.AddWithValue(peopleInQueue[i].Nome);
-                cmd.Parameters.AddWithValue(peopleInQueue[i].Nascimento);
-                cmd.Parameters.AddWithValue(peopleInQueue[i].Stack);
-                batch.BatchCommands.Add(cmd);
-            }
+                connection = scope.ServiceProvider.GetRequiredService<NpgsqlConnection>();
+                await connection.OpenAsync(stoppingToken);
 
-            await batch.ExecuteNonQueryAsync(stoppingToken);
-            connection?.Close();
+                await using var batch = new NpgsqlBatch(connection);
+
+                for (int i = 0; i < peopleInQueue.Length; i++)
+                {
+                    var cmd = new NpgsqlBatchCommand("INSERT INTO PESSOAS (ID, APELIDO, NOME, NASCIMENTO, STACK) VALUES ($1, $2, $3, $4, $5)");
+                    cmd.Parameters.AddWithValue(peopleInQueue[i].Id);
+                    cmd.Parameters.AddWithValue(peopleInQueue[i].Apelido);
+                    cmd.Parameters.AddWithValue(peopleInQueue[i].Nome);
+                    cmd.Parameters.AddWithValue(peopleInQueue[i].Nascimento);
+                    cmd.Parameters.AddWithValue(peopleInQueue[i].Stack);
+                    batch.BatchCommands.Add(cmd);
+                }
+
+                await batch.ExecuteNonQueryAsync(stoppingToken);
+            }
+            catch
+            {
+            }
+            finally
+            {
+                connection?.Close();
+            }
         }
     }
 }

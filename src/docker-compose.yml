@@ -55,13 +55,13 @@ services:
        POSTGRES_DB: rinhadb
     volumes:
       - ./create-script.sql:/docker-entrypoint-initdb.d/create-script.sql
-    command: postgres -c 'max_connections=1000'
+    command: postgres -c 'max_connections=1000' -c work_mem=800MB -c shared_buffers=1GB
   redis:
     image: redis
     container_name: cache
     ports:
       - "6379:6379"
-    command: redis-server --save "" --appendonly no
+    command: redis-server --save "" --appendonly no --maxclients 20000
     deploy:
       resources:
         limits:

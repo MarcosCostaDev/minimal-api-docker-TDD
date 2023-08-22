@@ -3,8 +3,6 @@ using RinhaBackEnd.Dtos.Requests;
 using RinhaBackEnd.Dtos.Response;
 using RinhaBackEnd.Extensions;
 using RinhaBackEnd.HostedServices;
-using StackExchange.Redis;
-using System.Collections.Concurrent;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,8 +56,6 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
     var jsonResult = result.ToJson();
 
     await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
-
-    //localRecords.TryAdd(result.Id, result);
 
     await sub.PublishAsync("added-record", jsonResult);
 
