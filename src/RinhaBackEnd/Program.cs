@@ -74,7 +74,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
     {
         if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
         attempt++;
-        await Task.Delay(500);
+        await Task.Delay(100);
     } while (attempt < 2);
 
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
@@ -102,13 +102,14 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
                       BUSCA ILIKE '%' || @search || '%'
                       limit 50;";
 
-    var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
+    var result = await connection.QueryAsync<PersonResponse>(query, new { search }, commandType: System.Data.CommandType.Text);
     return Results.Ok(result);
 
 });
 
 app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
+    await Task.Delay(1000);
     return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PESSOAS"));
 });
 

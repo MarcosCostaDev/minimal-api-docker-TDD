@@ -6,10 +6,12 @@ namespace RinhaBackEnd.HostedServices;
 public class QueueConsumerHostedService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<QueueConsumerHostedService> _logger;
 
-    public QueueConsumerHostedService(IServiceProvider serviceProvider)
+    public QueueConsumerHostedService(IServiceProvider serviceProvider, ILogger<QueueConsumerHostedService> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -23,7 +25,7 @@ public class QueueConsumerHostedService : BackgroundService
 
             if (!peopleInQueue.Any())
             {
-               await Task.Delay(200, stoppingToken);
+               await Task.Delay(100, stoppingToken);
                 continue;
             }
             NpgsqlConnection connection = null!;
@@ -47,8 +49,9 @@ public class QueueConsumerHostedService : BackgroundService
 
                 await batch.ExecuteNonQueryAsync(stoppingToken);
             }
-            catch
+            catch(Exception ex)
             {
+                _logger.LogError(ex, "Postgres error on insert");
             }
             finally
             {
