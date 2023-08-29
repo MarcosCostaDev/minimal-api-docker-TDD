@@ -33,9 +33,9 @@ public class Person
         if (string.IsNullOrWhiteSpace(Apelido)) return false;
         if (Apelido.Length > 32) return false;
         if (string.IsNullOrWhiteSpace(Nome)) return false;
-        if (Nome.Length > 32) return false;
+        if (Nome.Length > 100) return false;
         if (!Nascimento.HasValue) return false;
-        if (Stack != null && Stack.Any(p => string.IsNullOrWhiteSpace(p) || p.Length > 32)) return false;
+        if (Stack != null && !Stack.Any(p => !string.IsNullOrWhiteSpace(p) && p.Length <= 32)) return false;
         return true;
     }
 
@@ -46,7 +46,7 @@ public class Person
             Id = Id,
             Apelido = Apelido,
             Nome = Nome,
-            Stack = Stack.ToArray(),
+            Stack = Stack?.ToArray(),
             Nascimento = Nascimento.GetValueOrDefault()
         };
     }
