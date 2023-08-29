@@ -25,7 +25,7 @@ public class QueueConsumerHostedService : BackgroundService
 
             if (!peopleInQueue.Any())
             {
-               await Task.Delay(100, stoppingToken);
+               await Task.Delay(50, stoppingToken);
                 continue;
             }
             NpgsqlConnection connection = null!;
@@ -43,7 +43,7 @@ public class QueueConsumerHostedService : BackgroundService
                     cmd.Parameters.AddWithValue(peopleInQueue[i].Apelido);
                     cmd.Parameters.AddWithValue(peopleInQueue[i].Nome);
                     cmd.Parameters.AddWithValue(peopleInQueue[i].Nascimento);
-                    cmd.Parameters.AddWithValue(peopleInQueue[i].Stack);
+                    cmd.Parameters.AddWithValue(peopleInQueue[i].Stack == null ? DBNull.Value : peopleInQueue[i].Stack);
                     batch.BatchCommands.Add(cmd);
                 }
 
