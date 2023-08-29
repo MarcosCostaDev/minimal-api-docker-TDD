@@ -19,7 +19,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '0.3GB'
+          memory: '0.35GB'
   api02:
     <<: *api
     container_name: api02
@@ -29,8 +29,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.4'
-          memory: '1.4GB'
+          cpus: '0.6'
+          memory: '1.9GB'
     ports:
        - 5432:5432
     environment:
@@ -40,10 +40,23 @@ services:
     volumes:
       - ./create-script.sql:/docker-entrypoint-initdb.d/create-script.sql
     command: |
-          postgres -c 'max_connections=1000' 
-                   -c 'shared_buffers=800MB'
+          postgres -c 'max_connections=1500' 
+                   -c 'shared_buffers=512MB'
+                   -c 'maintenance_work_mem=256MB'
+                   -c 'effective_cache_size=1GB'
+                   -c 'wal_buffers=64MB'
+                   -c 'checkpoint_timeout=10min'
+                   -c 'checkpoint_completion_target=0.9'
+                   -c 'random_page_cost=4.0'
                    -c 'effective_io_concurrency=2'
-                   -c 'autovacuum=off'
+                   -c 'autovacuum=on'
+                   -c 'work_mem=4MB'
+                   -c 'log_statement=none'
+                   -c 'log_duration=off'
+                   -c 'log_lock_waits=on'
+                   -c 'log_error_verbosity=terse'
+                   -c 'log_min_messages=panic'
+                   -c 'log_min_error_statement=panic'
   redis:
     image: redis
     container_name: cache
@@ -53,8 +66,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
-          memory: '0.3GB'
+          cpus: '0.15'
+          memory: '0.2GB'
   proxy:
     container_name: proxy
     image: nginx:latest
@@ -68,7 +81,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
+          cpus: '0.15'
           memory: '0.2GB'
 
 networks:

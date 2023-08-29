@@ -15,5 +15,13 @@ namespace RinhaBackEnd.Extensions
 
             yield break;
         }
+
+        public static void Enqueue(this ConcurrentQueue<PersonResponse> queue, IEnumerable<PersonResponse> list)
+        {
+            for (int i = 0; i < list.Count(); i++)
+            {
+                queue.Enqueue(list.ElementAt(i));
+            }
+        }
     }
 }

@@ -74,7 +74,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
     {
         if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
         attempt++;
-        await Task.Delay(100);
+        await Task.Delay(600);
     } while (attempt < 2);
 
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
