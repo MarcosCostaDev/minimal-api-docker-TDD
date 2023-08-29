@@ -17,15 +17,16 @@ public class QueueConsumerHostedService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var scope = _serviceProvider.CreateScope();
-
+        int waitTime = 50;
         while (!stoppingToken.IsCancellationRequested)
         {
             var queue = _serviceProvider.GetRequiredService<ConcurrentQueue<PersonResponse>>();
-            var peopleInQueue = queue.Dequeue(100).ToArray();
+            var peopleInQueue = queue.Dequeue(1000).ToArray();
 
             if (!peopleInQueue.Any())
             {
-               await Task.Delay(50, stoppingToken);
+                await Task.Delay(waitTime, stoppingToken);
+                waitTime = waitTime >= 2_000 ? 50 : Convert.ToInt32(waitTime * 1.03);
                 continue;
             }
             NpgsqlConnection connection = null!;
@@ -48,8 +49,9 @@ public class QueueConsumerHostedService : BackgroundService
                 }
 
                 await batch.ExecuteNonQueryAsync(stoppingToken);
+                waitTime = 50;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Postgres error on insert");
             }
