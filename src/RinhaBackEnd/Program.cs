@@ -36,28 +36,28 @@ app.MapPost("/pessoas", async ([FromBody] PersonRequest? request,
 {
     if (request == null) return Results.UnprocessableEntity(request);
 
-    var person = new Person(request.Apelido!, request.Nome!, request.Nascimento!, request.Stack);
-
-    if (!person.IsValid()) return Results.UnprocessableEntity(request);
-
     var pool = await redis.GetAsync();
 
     var db = pool.Connection.GetDatabase();
     var sub = pool.Connection.GetSubscriber();
 
-    var existedApelido = await db.StringGetAsync($"personApelido:{person.Apelido}");
+    var existedApelido = await db.StringGetAsync($"personApelido:{request.Apelido}");
 
     if (existedApelido.HasValue) return Results.UnprocessableEntity(request);
 
-    var result = person.ToPersonResponse();
+     var person = new Person(request.Apelido!, request.Nome!, request.Nascimento!, request.Stack);
 
-    peopleToBeInserted.Enqueue(result);
+    if (!person.IsValid()) return Results.UnprocessableEntity(request);
+
+    var result = person.ToPersonResponse();
 
     var jsonResult = result.ToJson();
 
     await db.StringSetAsync($"personApelido:{person.Apelido}", ".", TimeSpan.FromMinutes(10));
 
     await sub.PublishAsync("added-record", jsonResult);
+ 
+    peopleToBeInserted.Enqueue(result);
 
     return Results.Created(new Uri($"/pessoas/{person.Id}", uriKind: UriKind.Relative), result);
 });
@@ -74,7 +74,7 @@ app.MapGet("/pessoas/{id:guid}", async ([FromRoute(Name = "id")] Guid? id,
     {
         if (localRecords.TryGetValue(id.Value, out var personResponse)) return Results.Ok(personResponse);
         attempt++;
-        await Task.Delay(500);
+        await Task.Delay(100);
     } while (attempt < 2);
 
     var queryResult = await connection.QueryFirstOrDefaultAsync<PersonResponse>(@"SELECT
@@ -102,13 +102,14 @@ app.MapGet("/pessoas", async ([FromQuery(Name = "t")] string? search, [FromServi
                       BUSCA ILIKE '%' || @search || '%'
                       limit 50;";
 
-    var result = await connection.QueryAsync<PersonResponse>(query, new { search = $"%{search}%" }, commandType: System.Data.CommandType.Text);
+    var result = await connection.QueryAsync<PersonResponse>(query, new { search }, commandType: System.Data.CommandType.Text);
     return Results.Ok(result);
 
 });
 
 app.MapGet("/contagem-pessoas", async ([FromServices] NpgsqlConnection connection) =>
 {
+    await Task.Delay(5000);
     return Results.Ok(await connection.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM PESSOAS"));
 });
 
